@@ -1,0 +1,23 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Event {
+  id             String   @id @default(cuid())
+  nombre         String
+  evento         String
+  fecha          DateTime // Guardaremos la fecha base
+  horaInicio     Int      // Para simplificar, la hora en formato 24h (ej: 7, 8, 14, 20)
+  horaFin        Int
+  numAsistentes  Int
+  requerimientos Json     // Array de strings JSON, ej: ["coffeebreak", "sillas"]
+  salasAsignadas String  // Para guardar array de IDs (ej: "1", "1,2", "1,2,3")
+  notas          String? // Opcional, para almacenar observaciones de la coordinadora
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
