@@ -35,7 +35,7 @@ export default function EventDetailsModal({ isOpen, event, onClose, onEdit, onDe
               <Calendar size={20} color="var(--accent-color)" />
               <div>
                 <strong style={{ display: 'block' }}>Fecha</strong>
-                <span>{format(new Date(event.fecha), "EEEE, d 'de' MMMM", { locale: es })}</span>
+                <span>{format(new Date(new Date(event.fecha).getTime() + 12 * 60 * 60 * 1000), "EEEE, d 'de' MMMM", { locale: es })}</span>
               </div>
             </div>
 

@@ -18,7 +18,7 @@ export default function EventModal({ isOpen, onClose, onSave, initialData }) {
     fecha: '',
     horaInicio: 7,
     horaFin: 8,
-    numAsistentes: 0,
+    numAsistentes: 40,
     requerimientos: [],
     salas: [], // Array de IDs: ['1', '2']
     notas: ''
