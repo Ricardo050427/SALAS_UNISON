@@ -68,7 +68,7 @@ export default async function ExportPage({ searchParams }) {
           ) : (
             events.map(event => (
               <tr key={event.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
-                <td style={{ padding: '12px', fontWeight: 'bold' }}>{format(new Date(event.fecha), 'EE, d MMM', { locale: es })}</td>
+                <td style={{ padding: '12px', fontWeight: 'bold' }}>{format(new Date(new Date(event.fecha).getTime() + 12 * 60 * 60 * 1000), 'EE, d MMM', { locale: es })}</td>
                 <td style={{ padding: '12px' }}>{event.horaInicio}:00 - {event.horaFin}:00</td>
                 <td style={{ padding: '12px' }}>{event.salasAsignadas}</td>
                 <td style={{ padding: '12px' }}>
