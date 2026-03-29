@@ -163,13 +163,13 @@ export default function Home() {
                         onClick={() => {
                           setSearchTerm('');
                           setIsSearchFocused(false);
-                          setCurrentDate(getValidWeekday(new Date(event.fecha)));
+                          setCurrentDate(getValidWeekday(new Date(new Date(event.fecha).getTime() + 12 * 60 * 60 * 1000)));
                           setSelectedEventDetails(event);
                         }}
                       >
                         <span className={styles.searchResultTitle}>{event.evento}</span>
                         <span className={styles.searchResultSub}>
-                          {event.nombre} • {format(new Date(event.fecha), "d MMM", { locale: es })}
+                          {event.nombre} • {format(new Date(new Date(event.fecha).getTime() + 12 * 60 * 60 * 1000), "d MMM", { locale: es })}
                         </span>
                       </div>
                     ))
