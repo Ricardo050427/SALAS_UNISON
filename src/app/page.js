@@ -116,7 +116,7 @@ export default function Home() {
         <header className={styles.header}>
           
           {/* Left: Brand & Date (Combined) */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
+          <div className={styles.headerLeft}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <div style={{ width: 40, height: 40, background: 'linear-gradient(135deg, var(--accent-hover), var(--accent-color))', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold' }}>
                 <Calendar size={24} />
@@ -135,7 +135,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center', flex: 1, paddingLeft: '2rem' }}>
+          <div className={styles.headerCenter}>
             {/* Search Bar */}
             <div className={styles.searchContainer}>
               <Search className={styles.searchIcon} size={18} />
@@ -196,7 +196,7 @@ export default function Home() {
           </div>
 
           {/* Right: Actions */}
-          <div className={styles.headerActions} style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          <div className={styles.headerRight}>
             <button onClick={handleExport} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--surface-border)', background: 'var(--surface-color)', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 500, transition: 'background 0.2s' }}>
               <Download size={18} /> Exportar
             </button>
