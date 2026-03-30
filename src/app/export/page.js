@@ -31,18 +31,23 @@ export default async function ExportPage({ searchParams }) {
   const startDate = new Date(startStr + "T00:00:00.000Z");
   const endDate   = new Date(endStr + "T23:59:59.999Z");
 
-  const events = await prisma.event.findMany({
-    where: {
-      fecha: {
-        gte: startDate,
-        lte: endDate
-      }
-    },
-    orderBy: [
-      { fecha: 'asc' },
-      { horaInicio: 'asc' }
-    ]
-  });
+  let events = [];
+  try {
+    events = await prisma.event.findMany({
+      where: {
+        fecha: {
+          gte: startDate,
+          lte: endDate
+        }
+      },
+      orderBy: [
+        { fecha: 'asc' },
+        { horaInicio: 'asc' }
+      ]
+    });
+  } catch (error) {
+    console.error("Database connection skipped during build:", error);
+  }
 
   const totalAsistentes = events.reduce((sum, e) => sum + (e.numAsistentes || 0), 0);
 
