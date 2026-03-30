@@ -25,6 +25,7 @@ export default function Home() {
   const [modalData, setModalData] = useState(null);
   const [selectedEventDetails, setSelectedEventDetails] = useState(null);
   const [lastCreatedEventId, setLastCreatedEventId] = useState(null);
+  const [toastError, setToastError] = useState(null);
   
   const [searchTerm, setSearchTerm] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
@@ -56,7 +57,8 @@ export default function Home() {
     }
 
     if (res.error) {
-      alert(res.error);
+      setToastError(res.error);
+      setTimeout(() => setToastError(null), 5000);
     } else {
       setLastCreatedEventId(res.event.id);
       setIsModalOpen(false);
@@ -67,8 +69,10 @@ export default function Home() {
   
   const handleDeleteEvent = async (id) => {
     const res = await deleteEvent(id);
-    if(res.error) alert(res.error);
-    else {
+    if(res.error) {
+      setToastError(res.error);
+      setTimeout(() => setToastError(null), 5000);
+    } else {
       setSelectedEventDetails(null);
       loadEvents();
     }
@@ -268,6 +272,14 @@ export default function Home() {
         onEdit={handleEditEvent}
         onDelete={handleDeleteEvent}
       />
+
+      {/* Floating Error Toast */}
+      {toastError && (
+        <div className={styles.toastError}>
+          <span style={{ fontSize: '1.2rem' }}>⚠️</span>
+          {toastError}
+        </div>
+      )}
     </div>
   );
 }

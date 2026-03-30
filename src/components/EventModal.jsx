@@ -32,7 +32,7 @@ export default function EventModal({ isOpen, onClose, onSave, initialData }) {
         fecha: initialData.fecha ? (typeof initialData.fecha === 'string' ? initialData.fecha.split('T')[0] : initialData.fecha.toISOString().split('T')[0]) : '',
         horaInicio: initialData.horaInicio || 7,
         horaFin: initialData.horaFin || 8,
-        numAsistentes: initialData.numAsistentes || 40,
+        numAsistentes: initialData.numAsistentes || '',
         requerimientos: initialData.requerimientos || [],
         salas: initialData.salasAsignadas ? initialData.salasAsignadas.split(',') : (initialData.salaInicial ? [initialData.salaInicial] : []),
         notas: initialData.notas || '',
@@ -40,7 +40,7 @@ export default function EventModal({ isOpen, onClose, onSave, initialData }) {
       });
     } else if (isOpen) {
       // Reset default
-      setFormData({ nombre: '', evento: '', fecha: '', horaInicio: 7, horaFin: 8, numAsistentes: 40, requerimientos: [], salas: [], notas: '' });
+      setFormData({ nombre: '', evento: '', fecha: '', horaInicio: 7, horaFin: 8, numAsistentes: '', requerimientos: [], salas: [], notas: '' });
     }
   }, [initialData, isOpen]);
 

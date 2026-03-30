@@ -44,6 +44,8 @@ export default async function ExportPage({ searchParams }) {
     ]
   });
 
+  const totalAsistentes = events.reduce((sum, e) => sum + (e.numAsistentes || 0), 0);
+
   return (
     <div style={{ padding: '2rem', fontFamily: 'sans-serif', color: '#000' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', borderBottom: '2px solid #000', paddingBottom: '1rem' }}>
@@ -92,6 +94,13 @@ export default async function ExportPage({ searchParams }) {
                 </td>
               </tr>
             ))
+          )}
+          {events.length > 0 && (
+            <tr style={{ background: '#f8fafc', fontWeight: 'bold' }}>
+              <td colSpan="4" style={{ padding: '12px', textAlign: 'right', fontSize: '1rem' }}>Total de Asistentes Programados:</td>
+              <td style={{ padding: '12px', textAlign: 'center', fontSize: '1.1rem', color: '#0f172a' }}>{totalAsistentes}</td>
+              <td></td>
+            </tr>
           )}
         </tbody>
       </table>
