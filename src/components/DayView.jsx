@@ -170,37 +170,48 @@ export default function DayView({ currentDate, events = [], onSlotClick, onEvent
           <p style={{ fontSize: '0.9rem' }}>No hay eventos programados.</p>
         </div>
       ) : (
-        sortedMobileHours.map(hour => (
-          <div key={`mob-${hour}`} className={styles.mobileHourBlock}>
-            <div className={styles.mobileTimeCol}>
-              {hour}:00
-            </div>
-            <div className={styles.mobileEventsList}>
-              {groupedMobileEvents[hour].map(evt => {
-                const isNew = evt.id === lastCreatedEventId;
-                return (
-                  <div 
-                    key={`mob-evt-${evt.id}`} 
-                    className={`${styles.mobileEventCard} ${isNew ? styles.animatePop : ''}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if(onEventClick) onEventClick(evt);
-                    }}
-                  >
-                    <div className={styles.mobileEventTitle}>{evt.evento}</div>
-                    <div className={styles.mobileEventTime}>{evt.horaInicio}:00 - {evt.horaFin}:00 hrs</div>
-                    <div className={styles.mobileEventDetails}>
-                      <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginRight: '8px' }}>
-                        👤 {evt.nombre}
-                      </span>
-                      <span className={styles.mobileRoomBadge}>{evt.salasAsignadas}</span>
+        sortedMobileHours.map(hour => {
+          // Ordenar eventos de la hora por número de sala
+          const eventsThisHour = [...groupedMobileEvents[hour]].sort((a, b) => {
+            const salaA = parseInt(a.salasAsignadas.split(',')[0]) || 0;
+            const salaB = parseInt(b.salasAsignadas.split(',')[0]) || 0;
+            return salaA - salaB;
+          });
+
+          return (
+            <div key={`mob-${hour}`} className={styles.mobileHourBlock}>
+              <div className={styles.mobileTimeDivider}>
+                <div className={styles.mobileTimeLine}></div>
+                <span>{hour}:00</span>
+                <div className={styles.mobileTimeLine}></div>
+              </div>
+              <div className={styles.mobileEventsList}>
+                {eventsThisHour.map(evt => {
+                  const isNew = evt.id === lastCreatedEventId;
+                  return (
+                    <div 
+                      key={`mob-evt-${evt.id}`} 
+                      className={`${styles.mobileEventCard} ${isNew ? styles.animatePop : ''}`}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if(onEventClick) onEventClick(evt);
+                      }}
+                    >
+                      <div className={styles.mobileEventTitle}>{evt.evento}</div>
+                      <div className={styles.mobileEventTime}>{evt.horaInicio}:00 - {evt.horaFin}:00 hrs</div>
+                      <div className={styles.mobileEventDetails}>
+                        <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginRight: '8px' }}>
+                          👤 {evt.nombre}
+                        </span>
+                        <span className={styles.mobileRoomBadge}>Sala: {evt.salasAsignadas}</span>
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        ))
+          );
+        })
       )}
     </div>
     </>
