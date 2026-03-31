@@ -197,13 +197,22 @@ export default function DayView({ currentDate, events = [], onSlotClick, onEvent
                         if(onEventClick) onEventClick(evt);
                       }}
                     >
-                      <div className={styles.mobileEventTitle}>{evt.evento}</div>
-                      <div className={styles.mobileEventTime}>{evt.horaInicio}:00 - {evt.horaFin}:00 hrs</div>
-                      <div className={styles.mobileEventDetails}>
-                        <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginRight: '8px' }}>
-                          👤 {evt.nombre}
-                        </span>
-                        <span className={styles.mobileRoomBadge}>Sala: {evt.salasAsignadas}</span>
+                      <div className={styles.mobileEventHeader}>
+                        <div className={styles.mobileEventTitle}>{evt.evento}</div>
+                        <div className={styles.mobileRoomBadge}>SALA {evt.salasAsignadas}</div>
+                      </div>
+                      
+                      <div className={styles.mobileEventBody}>
+                        <div className={styles.mobileEventRow}>
+                          <span style={{ fontSize: '1.05rem' }}>🕒</span>
+                          <span>{evt.horaInicio}:00 - {evt.horaFin}:00 hrs</span>
+                        </div>
+                        <div className={styles.mobileEventRow}>
+                          <span style={{ fontSize: '1.05rem' }}>👤</span>
+                          <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {evt.nombre}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   );
