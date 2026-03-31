@@ -43,8 +43,17 @@ export default function DayView({ currentDate, events = [], onSlotClick, onEvent
     if(onSlotClick) onSlotClick(hora, salaId);
   };
 
+  // Agrupar eventos para la vista móvil (Agenda)
+  const groupedMobileEvents = {};
+  dayEvents.forEach(ev => {
+    if (!groupedMobileEvents[ev.horaInicio]) groupedMobileEvents[ev.horaInicio] = [];
+    groupedMobileEvents[ev.horaInicio].push(ev);
+  });
+  const sortedMobileHours = Object.keys(groupedMobileEvents).map(Number).sort((a, b) => a - b);
+
   return (
-    <div className={styles.calendarWrapper}>
+    <>
+      <div className={`${styles.calendarWrapper} ${styles.desktopDayView}`}>
       
       {/* Columna de Horas Fija */}
       <div className={styles.timeCol}>
@@ -150,7 +159,50 @@ export default function DayView({ currentDate, events = [], onSlotClick, onEvent
           })}
         </div>
       </div>
-      
     </div>
+
+    {/* --- MOBILE AGENDA VIEW --- */}
+    <div className={styles.mobileDayView}>
+      {dayEvents.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '4rem 1rem', color: 'var(--text-secondary)' }}>
+          <span style={{ fontSize: '3rem', display: 'block', marginBottom: '1rem', opacity: 0.5 }}>📭</span>
+          <p style={{ fontWeight: 500 }}>Día libre.</p>
+          <p style={{ fontSize: '0.9rem' }}>No hay eventos programados.</p>
+        </div>
+      ) : (
+        sortedMobileHours.map(hour => (
+          <div key={`mob-${hour}`} className={styles.mobileHourBlock}>
+            <div className={styles.mobileTimeCol}>
+              {hour}:00
+            </div>
+            <div className={styles.mobileEventsList}>
+              {groupedMobileEvents[hour].map(evt => {
+                const isNew = evt.id === lastCreatedEventId;
+                return (
+                  <div 
+                    key={`mob-evt-${evt.id}`} 
+                    className={`${styles.mobileEventCard} ${isNew ? styles.animatePop : ''}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if(onEventClick) onEventClick(evt);
+                    }}
+                  >
+                    <div className={styles.mobileEventTitle}>{evt.evento}</div>
+                    <div className={styles.mobileEventTime}>{evt.horaInicio}:00 - {evt.horaFin}:00 hrs</div>
+                    <div className={styles.mobileEventDetails}>
+                      <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginRight: '8px' }}>
+                        👤 {evt.nombre}
+                      </span>
+                      <span className={styles.mobileRoomBadge}>{evt.salasAsignadas}</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        ))
+      )}
+    </div>
+    </>
   );
 }

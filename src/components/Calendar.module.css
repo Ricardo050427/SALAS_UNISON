@@ -162,9 +162,98 @@
   z-index: 50 !important;
 }
 
+/* Ocultar la vista móvil en Escritorio */
+.mobileDayView {
+  display: none;
+}
+
 /* Mobile Responsive */
 @media (max-width: 768px) {
-  .calendarWrapper {
+  /* Ocultar la vista de Cuadrícula (Grid) en Móvil */
+  .desktopDayView {
+    display: none !important;
+  }
+  
+  /* Mostrar vista Tipo Agenda */
+  .mobileDayView {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+    padding: 0.5rem 0 2rem 0;
+    width: 100%;
+    animation: fadeIn 0.3s ease;
+  }
+  
+  .mobileHourBlock {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+  
+  .mobileTimeCol {
+    width: 50px;
+    flex-shrink: 0;
+    text-align: right;
+    font-weight: 700;
+    color: var(--text-secondary);
+    font-size: 1rem;
+    padding-top: 0.5rem;
+  }
+  
+  .mobileEventsList {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    flex: 1;
+  }
+  
+  .mobileEventCard {
+    background: var(--surface-color);
+    border-left: 5px solid var(--accent-color);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  
+  .mobileEventCard:active {
+    transform: scale(0.97);
+  }
+  
+  .mobileEventTitle {
+    font-weight: 700;
+    font-size: 1.15rem;
+    color: var(--text-primary);
+    margin-bottom: 0.25rem;
+  }
+  
+  .mobileEventTime {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    margin-bottom: 0.75rem;
+    font-weight: 500;
+  }
+  
+  .mobileEventDetails {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+  }
+  
+  .mobileRoomBadge {
+    background: #fff7ed; /* Naranja muy clarito */
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-weight: 700;
+    color: var(--accent-color);
+    border: 1px solid #ffedd5;
+  }
+
+  /* Mantener el Grid scrolleable solo para la Vista Semanal */
+  .calendarWrapper:not(.desktopDayView) {
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     width: 100%;
