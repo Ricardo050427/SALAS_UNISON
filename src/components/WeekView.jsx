@@ -23,7 +23,7 @@ export default function WeekView({ currentDate, events = [], onSlotClick, onEven
   const days = getWeekDays(currentDate);
 
   const getEventsForDay = (date) => {
-    const targetDate = new Date(date).toISOString().split('T')[0];
+    const targetDate = format(date, 'yyyy-MM-dd');
     return events.filter(e => {
         const evDate = typeof e.fecha === 'string' ? e.fecha.split('T')[0] : new Date(e.fecha).toISOString().split('T')[0];
         return evDate === targetDate;

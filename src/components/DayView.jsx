@@ -22,8 +22,8 @@ export default function DayView({ currentDate, events = [], onSlotClick, onEvent
   const dayEvents = useMemo(() => {
     return events.filter(e => {
       // Comparación simple de fecha (YYYY-MM-DD)
-      const eDate = new Date(e.fecha).toISOString().split('T')[0];
-      const cDate = currentDate.toISOString().split('T')[0];
+      const eDate = typeof e.fecha === 'string' ? e.fecha.split('T')[0] : new Date(e.fecha).toISOString().split('T')[0];
+      const cDate = format(currentDate, 'yyyy-MM-dd');
       return eDate === cDate;
     });
   }, [currentDate, events]);
