@@ -217,7 +217,10 @@ export default function Home() {
               </button>
             </div>
 
-            <button className="btn-primary" onClick={() => { setModalData(null); setIsModalOpen(true); }} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', border: 'none', borderRadius: 'var(--radius-md)', background: 'var(--accent-color)', color: 'white', fontWeight: 600, cursor: 'pointer', boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)', transition: 'all 0.2s' }}>
+            <button className="btn-primary" onClick={() => { 
+              setModalData({ fecha: format(currentDate, 'yyyy-MM-dd') }); 
+              setIsModalOpen(true); 
+            }} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', border: 'none', borderRadius: 'var(--radius-md)', background: 'var(--accent-color)', color: 'white', fontWeight: 600, cursor: 'pointer', boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)', transition: 'all 0.2s' }}>
               <PlusCircle size={18} />
               Nuevo Evento
             </button>
@@ -236,7 +239,7 @@ export default function Home() {
                   horaInicio: h, 
                   horaFin: h + 1, 
                   salaInicial: room,
-                  fecha: currentDate.toISOString().split('T')[0] 
+                  fecha: format(currentDate, 'yyyy-MM-dd') 
                 });
                 setIsModalOpen(true);
               }}
@@ -248,7 +251,7 @@ export default function Home() {
               events={events} 
               lastCreatedEventId={lastCreatedEventId}
               onSlotClick={(h, date) => {
-                setModalData({ horaInicio: h, horaFin: h + 1, fecha: date.toISOString().split('T')[0] });
+                setModalData({ horaInicio: h, horaFin: h + 1, fecha: format(date, 'yyyy-MM-dd') });
                 setIsModalOpen(true);
               }}
               onEventClick={(ev) => setSelectedEventDetails(ev)}
