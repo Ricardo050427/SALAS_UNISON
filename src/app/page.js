@@ -244,6 +244,8 @@ export default function Home() {
                 setIsModalOpen(true);
               }}
               onEventClick={(ev) => setSelectedEventDetails(ev)}
+              onPrevDay={handlePrev}
+              onNextDay={handleNext}
             />
           ) : (
             <WeekView 

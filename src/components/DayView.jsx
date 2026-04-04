@@ -16,7 +16,41 @@ const EVENT_COLORS = [
   'linear-gradient(135deg, #10b981, #059669)', // Verde Esmeralda
 ];
 
-export default function DayView({ currentDate, events = [], onSlotClick, onEventClick, lastCreatedEventId }) {
+export default function DayView({ currentDate, events = [], onSlotClick, onEventClick, lastCreatedEventId, onPrevDay, onNextDay }) {
+  const touchStartX = React.useRef(null);
+  const touchStartY = React.useRef(null);
+
+  const minSwipeDistance = 50;
+
+  const onTouchStart = (e) => {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+  };
+
+  const onTouchEndHandler = (e) => {
+    if (touchStartX.current === null || touchStartY.current === null) return;
+    
+    const touchEndX = e.changedTouches[0].clientX;
+    const touchEndY = e.changedTouches[0].clientY;
+    
+    const distanceX = touchStartX.current - touchEndX;
+    const distanceY = Math.abs(touchStartY.current - touchEndY);
+    
+    // Solo actúa si el movimiento horizontal es mayor que el vertical (para permitir el scroll normal hacia abajo/arriba)
+    // y la distancia es mayor al mínimo requerido
+    if (Math.abs(distanceX) > distanceY && Math.abs(distanceX) > minSwipeDistance) {
+      if (distanceX > 0 && onNextDay) {
+        // Swipe a la izquierda -> siguiente día
+        onNextDay();
+      } else if (distanceX < 0 && onPrevDay) {
+        // Swipe a la derecha -> día anterior
+        onPrevDay();
+      }
+    }
+    
+    touchStartX.current = null;
+    touchStartY.current = null;
+  };
   
   // Filtrar eventos del día actual
   const dayEvents = useMemo(() => {
@@ -162,7 +196,11 @@ export default function DayView({ currentDate, events = [], onSlotClick, onEvent
     </div>
 
     {/* --- MOBILE AGENDA VIEW --- */}
-    <div className={styles.mobileDayView}>
+    <div 
+      className={styles.mobileDayView}
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEndHandler}
+    >
       {dayEvents.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '4rem 1rem', color: 'var(--text-secondary)' }}>
           <span style={{ fontSize: '3rem', display: 'block', marginBottom: '1rem', opacity: 0.5 }}>📭</span>
