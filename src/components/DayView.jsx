@@ -19,6 +19,30 @@ const EVENT_COLORS = [
 export default function DayView({ currentDate, events = [], onSlotClick, onEventClick, lastCreatedEventId, onPrevDay, onNextDay }) {
   const touchStartX = React.useRef(null);
   const touchStartY = React.useRef(null);
+  
+  const prevDateRef = React.useRef(currentDate);
+  const [animClass, setAnimClass] = React.useState('');
+
+  React.useEffect(() => {
+    if (!currentDate || !prevDateRef.current) return;
+    
+    const currTime = currentDate.getTime();
+    const prevTime = prevDateRef.current.getTime();
+    
+    if (currTime > prevTime) {
+      setAnimClass(styles.slideLeft);
+    } else if (currTime < prevTime) {
+      setAnimClass(styles.slideRight);
+    }
+    
+    prevDateRef.current = currentDate;
+    
+    const timer = setTimeout(() => {
+      setAnimClass('');
+    }, 350); 
+    
+    return () => clearTimeout(timer);
+  }, [currentDate]);
 
   const minSwipeDistance = 50;
 
@@ -197,7 +221,7 @@ export default function DayView({ currentDate, events = [], onSlotClick, onEvent
 
     {/* --- MOBILE AGENDA VIEW --- */}
     <div 
-      className={styles.mobileDayView}
+      className={`${styles.mobileDayView} ${animClass}`}
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEndHandler}
     >
