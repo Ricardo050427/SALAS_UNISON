@@ -1,6 +1,6 @@
 "use client";
 import React, { useState } from 'react';
-import { format } from 'date-fns';
+import { format, startOfWeek, addDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import DayView from '@/components/DayView';
 import WeekView from '@/components/WeekView';
@@ -111,7 +111,18 @@ export default function Home() {
     setCurrentDate(newDate);
   };
 
-  const formattedDate = format(currentDate, view === 'day' ? "EEEE, d 'de' MMMM" : "'Semana del' d", { locale: es });
+  let formattedDate = '';
+  if (view === 'day') {
+    formattedDate = format(currentDate, "EEEE, d 'de' MMMM", { locale: es });
+  } else {
+    const start = startOfWeek(currentDate, { weekStartsOn: 1 });
+    const end = addDays(start, 4);
+    if (start.getMonth() === end.getMonth()) {
+      formattedDate = `Semana del ${format(start, 'd')} al ${format(end, "d 'de' MMMM", { locale: es })}`;
+    } else {
+      formattedDate = `Semana del ${format(start, "d 'de' MMMM", { locale: es })} al ${format(end, "d 'de' MMMM", { locale: es })}`;
+    }
+  }
 
   return (
     <div className={styles.container}>

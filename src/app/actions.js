@@ -63,7 +63,8 @@ export async function createEvent(formData) {
         numAsistentes: pax,
         salasAsignadas: asignadas.join(','),
         requerimientos: formData.requerimientos,
-        notas: formData.notas
+        notas: formData.notas,
+        color: formData.color
       }
     });
 
@@ -141,7 +142,8 @@ export async function updateEvent(formData) {
         numAsistentes: pax,
         salasAsignadas: salasSolicitadas.join(','),
         requerimientos: formData.requerimientos,
-        notas: formData.notas
+        notas: formData.notas,
+        color: formData.color
       }
     });
 

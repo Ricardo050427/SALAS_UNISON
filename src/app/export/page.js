@@ -1,17 +1,18 @@
 import prisma from '@/lib/prisma';
-import { format, startOfWeek, endOfWeek } from 'date-fns';
+import { format, startOfWeek, endOfWeek, addDays } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { formatRooms } from '@/lib/colors';
 
 export const dynamic = 'force-dynamic';
 
 export default async function ExportPage({ searchParams }) {
   const params = await searchParams; // Next.js 15+ needs await, but we handle carefully. Usually it's an object in NextJS 14. We'll use it directly if possible, or support Promise-based.
   const view = params?.view || 'day';
-  
+
   const paramStr = params?.date || format(new Date(), 'yyyy-MM-dd');
   // Eliminamos cualquier 'T...' previo que pudiese venir y nos quedamos con el día
-  const cleanDateStr = paramStr.split('T')[0]; 
-  
+  const cleanDateStr = paramStr.split('T')[0];
+
   // Usamos T12:00:00 para operar con date-fns de forma segura en local
   const baseLocalTime = new Date(cleanDateStr + 'T12:00:00');
 
@@ -29,7 +30,7 @@ export default async function ExportPage({ searchParams }) {
 
   // Creamos Date objects UTC exactos como los guardó prisma por defecto (UTC Midnight)
   const startDate = new Date(startStr + "T00:00:00.000Z");
-  const endDate   = new Date(endStr + "T23:59:59.999Z");
+  const endDate = new Date(endStr + "T23:59:59.999Z");
 
   let events = [];
   try {
@@ -54,7 +55,13 @@ export default async function ExportPage({ searchParams }) {
   return (
     <div style={{ padding: '2rem', fontFamily: 'sans-serif', color: '#000' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', borderBottom: '2px solid #000', paddingBottom: '1rem' }}>
-        <h2>Reporte de Agenda para Intendencia</h2>
+        <h2 style={{ textTransform: 'capitalize' }}>
+          Reporte de Agenda - {
+            view === 'day' 
+              ? format(baseLocalTime, "EEEE, d 'de' MMMM 'de' yyyy", { locale: es })
+              : `Del ${format(localStart, "EEEE, d 'de' MMMM", { locale: es })} al ${format(addDays(localStart, 4), "EEEE, d 'de' MMMM 'de' yyyy", { locale: es })}`
+          }
+        </h2>
         <span>Impreso el: {format(new Date(), "EEEE, d 'de' MMMM yyyy", { locale: es })}</span>
       </div>
 
@@ -77,9 +84,9 @@ export default async function ExportPage({ searchParams }) {
               <tr key={event.id} style={{ borderBottom: '1px solid #e2e8f0' }}>
                 <td style={{ padding: '12px', fontWeight: 'bold' }}>{format(new Date(new Date(event.fecha).getTime() + 12 * 60 * 60 * 1000), 'EE, d MMM', { locale: es })}</td>
                 <td style={{ padding: '12px' }}>{event.horaInicio}:00 - {event.horaFin}:00</td>
-                <td style={{ padding: '12px' }}>{event.salasAsignadas}</td>
+                <td style={{ padding: '12px' }}>{formatRooms(event.salasAsignadas)}</td>
                 <td style={{ padding: '12px' }}>
-                  <strong>{event.evento}</strong><br/>
+                  <strong>{event.evento}</strong><br />
                   <span style={{ fontSize: '0.8rem', color: '#475569' }}>{event.nombre}</span>
                 </td>
                 <td style={{ padding: '12px', textAlign: 'center' }}>{event.numAsistentes}</td>
@@ -89,10 +96,10 @@ export default async function ExportPage({ searchParams }) {
                       {event.requerimientos.map(r => <li key={r}>{r}</li>)}
                     </ul>
                   ) : <span style={{ color: '#94a3b8' }}>Sin requerimientos</span>}
-                  
+
                   {event.notas && (
                     <div style={{ marginTop: '8px', padding: '6px', background: '#fef3c7', borderLeft: '3px solid #f59e0b', borderRadius: '4px', fontSize: '0.85rem' }}>
-                      <strong style={{ display: 'block', color: '#b45309', marginBottom: '2px' }}>Notas:</strong> 
+                      <strong style={{ display: 'block', color: '#b45309', marginBottom: '2px' }}>Notas:</strong>
                       {event.notas}
                     </div>
                   )}

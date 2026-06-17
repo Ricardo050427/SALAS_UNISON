@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Save } from 'lucide-react';
 import styles from './EventModal.module.css';
+import { COLOR_OPTIONS } from '@/lib/colors';
 
 const REQUERIMIENTOS_OPCIONES = [
   { id: 'coffeebreak', label: 'Coffee Break' },
@@ -18,10 +19,11 @@ export default function EventModal({ isOpen, onClose, onSave, initialData }) {
     fecha: '',
     horaInicio: 7,
     horaFin: 8,
-    numAsistentes: 40,
+    numAsistentes: '',
     requerimientos: [],
     salas: [], // Array de IDs: ['1', '2']
-    notas: ''
+    notas: '',
+    color: ''
   });
 
   useEffect(() => {
@@ -36,11 +38,12 @@ export default function EventModal({ isOpen, onClose, onSave, initialData }) {
         requerimientos: initialData.requerimientos || [],
         salas: initialData.salasAsignadas ? initialData.salasAsignadas.split(',') : (initialData.salaInicial ? [initialData.salaInicial] : []),
         notas: initialData.notas || '',
+        color: initialData.color || '',
         id: initialData.id
       });
     } else if (isOpen) {
       // Reset default
-      setFormData({ nombre: '', evento: '', fecha: '', horaInicio: 7, horaFin: 8, numAsistentes: '', requerimientos: [], salas: [], notas: '' });
+      setFormData({ nombre: '', evento: '', fecha: '', horaInicio: 7, horaFin: 8, numAsistentes: '', requerimientos: [], salas: [], notas: '', color: '' });
     }
   }, [initialData, isOpen]);
 
@@ -77,8 +80,20 @@ export default function EventModal({ isOpen, onClose, onSave, initialData }) {
       alert("Debes seleccionar al menos una sala.");
       return;
     }
+    
+    // Asignar color aleatorio si no se seleccionó ninguno
+    let selectedColor = formData.color;
+    if (!selectedColor) {
+      const colors = COLOR_OPTIONS.map(opt => opt.id);
+      selectedColor = colors[Math.floor(Math.random() * colors.length)];
+    }
+
     // Convert current salas array back to string for the API format matching schema
-    const payload = { ...formData, salasAsignadas: formData.salas.sort().join(',') };
+    const payload = { 
+      ...formData, 
+      color: selectedColor,
+      salasAsignadas: formData.salas.sort().join(',') 
+    };
     onSave(payload);
   };
 
@@ -170,6 +185,22 @@ export default function EventModal({ isOpen, onClose, onSave, initialData }) {
                   />
                   {req.label}
                 </label>
+              ))}
+            </div>
+          </div>
+
+          <div className={`${styles.formGroup} ${styles.colorSelectorGroup}`}>
+            <label>Color</label>
+            <div className={styles.colorSelector}>
+              {COLOR_OPTIONS.map(opt => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  className={`${styles.colorCircle} ${formData.color === opt.id ? styles.selectedColor : ''}`}
+                  style={{ backgroundColor: opt.value }}
+                  onClick={() => setFormData(prev => ({ ...prev, color: opt.id }))}
+                  title={opt.label}
+                />
               ))}
             </div>
           </div>

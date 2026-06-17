@@ -3,6 +3,7 @@ import React, { useMemo } from 'react';
 import styles from './Calendar.module.css';
 import { format, startOfWeek, addDays } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { getEventGradient, formatRooms } from '@/lib/colors';
 
 const HOURS = Array.from({ length: 14 }, (_, i) => i + 7); // 7 to 20
 
@@ -105,15 +106,17 @@ export default function WeekView({ currentDate, events = [], onSlotClick, onEven
                   const duration = event.horaFin - event.horaInicio;
                   const top = startOffset * 80 + 4;
                   const height = duration * 80 - 8;
-                  const bgGradient = getColorTemplate(event.horaInicio);
+                  const bgGradient = getEventGradient(event.color, event.horaInicio);
 
                   return blocksForEvent.map(block => {
                     const widthPercent = block.span * 33.33;
                     const leftPercent = (block.start - 1) * 33.33;
                     
-                    const salaLabel = block.span > 1 
-                      ? `S${block.start}-${block.start + block.span - 1}` 
-                      : `Sala ${block.start}`;
+                    const blockRooms = [];
+                    for (let r = block.start; r < block.start + block.span; r++) {
+                      blockRooms.push(r);
+                    }
+                    const salaLabel = formatRooms(blockRooms.join(','));
 
                     return (
                       <div 

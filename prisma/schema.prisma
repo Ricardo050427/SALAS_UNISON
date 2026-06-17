@@ -18,6 +18,7 @@ model Event {
   requerimientos Json     // Array de strings JSON, ej: ["coffeebreak", "sillas"]
   salasAsignadas String  // Para guardar array de IDs (ej: "1", "1,2", "1,2,3")
   notas          String? // Opcional, para almacenar observaciones de la coordinadora
+  color          String? // Identificador de color ("naranja", "azul", "verde", "morado", "rosa", "teal")
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 }
