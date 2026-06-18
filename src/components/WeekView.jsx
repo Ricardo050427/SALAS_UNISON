@@ -4,6 +4,7 @@ import styles from './Calendar.module.css';
 import { format, startOfWeek, addDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { getEventGradient, formatRooms } from '@/lib/colors';
+import { Maximize2, Minimize2 } from 'lucide-react';
 
 const HOURS = Array.from({ length: 14 }, (_, i) => i + 7); // 7 to 20
 
@@ -13,7 +14,7 @@ const EVENT_COLORS = [
   'linear-gradient(135deg, #10b981, #059669)', // Verde Esmeralda
 ];
 
-export default function WeekView({ currentDate, events = [], onSlotClick, onEventClick, lastCreatedEventId }) {
+export default function WeekView({ currentDate, events = [], onSlotClick, onEventClick, lastCreatedEventId, showSubdivisions = true, isFullscreen = false, onToggleFullscreen }) {
   
   // Lunes a Viernes de la semana actual
   const getWeekDays = (date) => {
@@ -46,7 +47,15 @@ export default function WeekView({ currentDate, events = [], onSlotClick, onEven
       
       {/* Columna de Horas */}
       <div className={styles.timeCol}>
-        <div className={styles.headerCorner}></div>
+        <div className={styles.headerCorner}>
+          <button 
+            className={styles.fullscreenBtn} 
+            onClick={onToggleFullscreen}
+            title={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
+          >
+            {isFullscreen ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
+          </button>
+        </div>
         {HOURS.map(h => (
           <div key={`time-${h}`} className={styles.timeSlot}>
             {h > 12 ? `${h-12} PM` : h === 12 ? '12 PM' : `${h} AM`}
@@ -59,10 +68,24 @@ export default function WeekView({ currentDate, events = [], onSlotClick, onEven
         {/* Cabecera de Días */}
         <div className={styles.headerRow}>
           {days.map((day, i) => (
-            <div key={`day-${i}`} className={styles.roomHeader}>
-              {format(day, 'EEEE', { locale: es }).toUpperCase()}
-              <span className={styles.roomSub}>{format(day, 'd MMM')}</span>
-            </div>
+            showSubdivisions ? (
+              <div key={`day-${i}`} className={styles.weekDayHeader}>
+                <div className={styles.weekDayHeaderTop}>
+                  {format(day, 'EEEE', { locale: es }).toUpperCase()}
+                  <span className={styles.roomSub}>{format(day, 'd MMM')}</span>
+                </div>
+                <div className={styles.weekDayHeaderBottom}>
+                  <div className={styles.weekSubroomHeader}>Sala 1</div>
+                  <div className={styles.weekSubroomHeader}>Sala 2</div>
+                  <div className={styles.weekSubroomHeader}>Sala 3</div>
+                </div>
+              </div>
+            ) : (
+              <div key={`day-${i}`} className={styles.roomHeader}>
+                {format(day, 'EEEE', { locale: es }).toUpperCase()}
+                <span className={styles.roomSub}>{format(day, 'd MMM')}</span>
+              </div>
+            )
           ))}
         </div>
 
@@ -75,12 +98,28 @@ export default function WeekView({ currentDate, events = [], onSlotClick, onEven
               <div key={`col-day-${dayIndex}`} className={styles.roomColumn}>
                 
                 {HOURS.map(h => (
-                  <div 
-                    key={`slot-day-${dayIndex}-${h}`} 
-                    className={styles.gridSlot}
-                    onClick={() => onSlotClick && onSlotClick(h, day)}
-                  >
-                  </div>
+                  showSubdivisions ? (
+                    <div 
+                      key={`slot-day-${dayIndex}-${h}`} 
+                      className={styles.weekGridRow}
+                    >
+                      {['1', '2', '3'].map(roomId => (
+                        <div
+                          key={`slot-day-${dayIndex}-${h}-${roomId}`}
+                          className={styles.weekGridSubSlot}
+                          onClick={() => onSlotClick && onSlotClick(h, day, roomId)}
+                        >
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div 
+                      key={`slot-day-${dayIndex}-${h}`} 
+                      className={styles.gridSlot}
+                      onClick={() => onSlotClick && onSlotClick(h, day)}
+                    >
+                    </div>
+                  )
                 ))}
 
                 {/* Renderizar Eventos superpuestos fraccionados por Sala */}
@@ -137,7 +176,9 @@ export default function WeekView({ currentDate, events = [], onSlotClick, onEven
                         }}
                       >
                         <div className={styles.eventTitle} style={{ fontSize: '0.8rem', lineHeight: '1.2' }}>
-                          <span style={{ fontWeight: '800', display: 'block', fontSize: '0.7em', textTransform: 'uppercase', opacity: 0.9 }}>{salaLabel}</span>
+                          <span style={{ fontWeight: '800', display: 'block', fontSize: '0.7em', opacity: 0.9 }}>
+                            {salaLabel.toUpperCase().replace(/\bY\b/g, 'y')}
+                          </span>
                           {event.evento}
                         </div>
                       </div>

@@ -26,6 +26,8 @@ export default function Home() {
   const [selectedEventDetails, setSelectedEventDetails] = useState(null);
   const [lastCreatedEventId, setLastCreatedEventId] = useState(null);
   const [toastError, setToastError] = useState(null);
+  const [showSubdivisions, setShowSubdivisions] = useState(true);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   
   const [searchTerm, setSearchTerm] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
@@ -128,7 +130,8 @@ export default function Home() {
     <div className={styles.container}>
       <main className={styles.main}>
         {/* Superior Header */}
-        <header className={styles.header}>
+        {!isFullscreen && (
+          <header className={styles.header}>
           
           {/* Left: Brand & Date (Combined) */}
           <div className={styles.headerLeft}>
@@ -193,50 +196,83 @@ export default function Home() {
               )}
             </div>
 
-            {/* Center: View Toggles */}
-            <div style={{ display: 'flex', background: 'var(--surface-color)', padding: '6px', borderRadius: 'var(--radius-md)', border: '1px solid var(--surface-border)', gap: '4px' }}>
-              <button 
-                onClick={() => setView('day')}
-                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: 'var(--radius-md)', border: 'none', background: view === 'day' ? 'var(--accent-color)' : 'transparent', color: view === 'day' ? 'white' : 'var(--text-secondary)', cursor: 'pointer', fontWeight: 500, transition: 'all 0.2s' }}
-              >
-                <CalendarDays size={18} /> Vista Diaria
-              </button>
-              <button 
-                onClick={() => setView('week')}
-                style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: 'var(--radius-md)', border: 'none', background: view === 'week' ? 'var(--accent-color)' : 'transparent', color: view === 'week' ? 'white' : 'var(--text-secondary)', cursor: 'pointer', fontWeight: 500, transition: 'all 0.2s' }}
-              >
-                <CalendarCheck size={18} /> Vista Semanal
-              </button>
-            </div>
+            {/* Center: View Toggles container removed from here to clean up center */}
           </div>
 
-          {/* Right: Actions */}
+          {/* Right: Actions (Unified 3-column layout) */}
           <div className={styles.headerRight}>
-            <button onClick={handleExport} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 16px', borderRadius: 'var(--radius-md)', border: '1px solid var(--surface-border)', background: 'var(--surface-color)', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 500, transition: 'background 0.2s' }}>
-              <Download size={18} /> Exportar
-            </button>
+            
+            {/* Column 1: View Selector & Switch */}
+            <div className={styles.headerColumn}>
+              {/* View Toggles (Segmented control style) */}
+              <div className={`${styles.viewTogglesContainer} ${view === 'week' ? styles.viewTogglesWeek : styles.viewTogglesDay}`}>
+                <button 
+                  onClick={() => setView('day')}
+                  className={`${styles.viewToggleBtn} ${view === 'week' ? styles.viewToggleBtnWeek : styles.viewToggleBtnDay} ${view === 'day' ? styles.viewToggleBtnActive : ''}`}
+                >
+                  <CalendarDays size={view === 'week' ? 14 : 18} />
+                  <span>Vista Diaria</span>
+                </button>
+                <button 
+                  onClick={() => setView('week')}
+                  className={`${styles.viewToggleBtn} ${view === 'week' ? styles.viewToggleBtnWeek : styles.viewToggleBtnDay} ${view === 'week' ? styles.viewToggleBtnActive : ''}`}
+                >
+                  <CalendarCheck size={view === 'week' ? 14 : 18} />
+                  <span>Vista Semanal</span>
+                </button>
+              </div>
 
-            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', background: 'var(--surface-color)', padding: '6px', borderRadius: 'var(--radius-md)', border: '1px solid var(--surface-border)' }}>
-              <button className="btn-icon" onClick={handlePrev} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '6px', borderRadius: '6px', display: 'flex', alignItems: 'center' }}>
-                <ChevronLeft size={20} color="var(--text-secondary)" />
-              </button>
-              <button className="btn-icon" onClick={() => setCurrentDate(getValidWeekday(new Date()))} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 500, color: 'var(--text-primary)', padding: '0 8px'}}>
-                Hoy
-              </button>
-              <button className="btn-icon" onClick={handleNext} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '6px', borderRadius: '6px', display: 'flex', alignItems: 'center' }}>
-                <ChevronRight size={20} color="var(--text-secondary)" />
+              {/* Subdivisions switch */}
+              {view === 'week' && (
+                <div 
+                  className={styles.switchContainerCompact} 
+                  onClick={() => setShowSubdivisions(!showSubdivisions)}
+                >
+                  <span className={styles.switchLabelTextSmall}>Dividir salas</span>
+                  <label className={styles.switchSmall} onClick={e => e.stopPropagation()}>
+                    <input 
+                      type="checkbox" 
+                      checked={showSubdivisions} 
+                      onChange={(e) => setShowSubdivisions(e.target.checked)}
+                    />
+                    <span className={styles.sliderSmall}></span>
+                  </label>
+                </div>
+              )}
+            </div>
+
+            {/* Column 2: Navigation & Export */}
+            <div className={styles.headerColumn}>
+              {/* Navegación (< Hoy >) - Unified segmented design */}
+              <div style={{ display: 'flex', background: '#f1f5f9', borderRadius: 'var(--radius-md)', overflow: 'hidden', flexShrink: 0, height: '36px', boxSizing: 'border-box' }}>
+                <button className="btn-icon" onClick={handlePrev} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '0 10px', height: '100%', display: 'flex', alignItems: 'center', borderRight: '1px solid rgba(0, 0, 0, 0.06)' }}>
+                  <ChevronLeft size={14} color="var(--text-secondary)" />
+                </button>
+                <button className="btn-icon" onClick={() => setCurrentDate(getValidWeekday(new Date()))} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 600, color: 'var(--text-primary)', padding: '0 12px', height: '100%', fontSize: '0.8rem', borderRight: '1px solid rgba(0, 0, 0, 0.06)' }}>
+                  Hoy
+                </button>
+                <button className="btn-icon" onClick={handleNext} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: '0 10px', height: '100%', display: 'flex', alignItems: 'center' }}>
+                  <ChevronRight size={14} color="var(--text-secondary)" />
+                </button>
+              </div>
+
+              {/* Exportar (Flat solid button, styled in CSS) */}
+              <button onClick={handleExport} className={styles.exportBtnHeader}>
+                <Download size={14} /> Exportar
               </button>
             </div>
 
-            <button className="btn-primary" onClick={() => { 
+            {/* Column 3: Nuevo Evento (Spans full height of parent flex container) */}
+            <button className={styles.newEventBtn} onClick={() => { 
               setModalData({ fecha: format(currentDate, 'yyyy-MM-dd') }); 
               setIsModalOpen(true); 
-            }} style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 16px', border: 'none', borderRadius: 'var(--radius-md)', background: 'var(--accent-color)', color: 'white', fontWeight: 600, cursor: 'pointer', boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)', transition: 'all 0.2s' }}>
+            }}>
               <PlusCircle size={18} />
-              Nuevo Evento
+              <span>Nuevo Evento</span>
             </button>
           </div>
         </header>
+        )}
 
         {/* Calendar Workspace (Grid injected here) */}
         <div className={styles.workspace} style={{ display: 'flex' }}>
@@ -245,6 +281,8 @@ export default function Home() {
               currentDate={currentDate} 
               events={events} 
               lastCreatedEventId={lastCreatedEventId}
+              isFullscreen={isFullscreen}
+              onToggleFullscreen={() => setIsFullscreen(!isFullscreen)}
               onSlotClick={(h, room) => {
                 setModalData({ 
                   horaInicio: h, 
@@ -263,8 +301,16 @@ export default function Home() {
               currentDate={currentDate} 
               events={events} 
               lastCreatedEventId={lastCreatedEventId}
-              onSlotClick={(h, date) => {
-                setModalData({ horaInicio: h, horaFin: h + 1, fecha: format(date, 'yyyy-MM-dd') });
+              showSubdivisions={showSubdivisions}
+              isFullscreen={isFullscreen}
+              onToggleFullscreen={() => setIsFullscreen(!isFullscreen)}
+              onSlotClick={(h, date, roomId) => {
+                setModalData({ 
+                  horaInicio: h, 
+                  horaFin: h + 1, 
+                  fecha: format(date, 'yyyy-MM-dd'),
+                  salaInicial: roomId
+                });
                 setIsModalOpen(true);
               }}
               onEventClick={(ev) => setSelectedEventDetails(ev)}

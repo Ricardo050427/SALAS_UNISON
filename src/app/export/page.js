@@ -55,11 +55,11 @@ export default async function ExportPage({ searchParams }) {
   return (
     <div style={{ padding: '2rem', fontFamily: 'sans-serif', color: '#000' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', borderBottom: '2px solid #000', paddingBottom: '1rem' }}>
-        <h2 style={{ textTransform: 'capitalize' }}>
-          Reporte de Agenda - {
+        <h2>
+          Reporte de agenda - {
             view === 'day' 
-              ? format(baseLocalTime, "EEEE, d 'de' MMMM 'de' yyyy", { locale: es })
-              : `Del ${format(localStart, "EEEE, d 'de' MMMM", { locale: es })} al ${format(addDays(localStart, 4), "EEEE, d 'de' MMMM 'de' yyyy", { locale: es })}`
+              ? format(baseLocalTime, "EEEE d 'de' MMMM 'de' yyyy", { locale: es })
+              : `del ${format(localStart, "EEEE d 'de' MMMM", { locale: es })} al ${format(addDays(localStart, 4), "EEEE d 'de' MMMM 'de' yyyy", { locale: es })}`
           }
         </h2>
         <span>Impreso el: {format(new Date(), "EEEE, d 'de' MMMM yyyy", { locale: es })}</span>

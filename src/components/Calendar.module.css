@@ -71,6 +71,52 @@
   justify-content: center;
 }
 
+.weekDayHeader {
+  flex: 1;
+  min-width: 250px;
+  height: 100%;
+  min-height: 80px;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  border-right: 2px solid #cbd5e1;
+  display: flex;
+  flex-direction: column;
+}
+
+.weekDayHeaderTop {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  color: #ea580c;
+  padding: 6px 0 2px 0;
+  font-size: 0.9rem;
+  border-bottom: 1px solid #cbd5e1;
+}
+
+.weekDayHeaderBottom {
+  display: flex;
+  height: 28px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #c2410c;
+  background: rgba(234, 88, 12, 0.04);
+}
+
+.weekSubroomHeader {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.weekSubroomHeader:not(:last-child) {
+  border-right: 1px solid #cbd5e1;
+}
+
 .headerCorner {
   height: 80px;
   min-height: 80px;
@@ -79,6 +125,31 @@
   border-bottom: 2px solid #c2410c; /* Mismo grosor que headerRow */
   border-right: 2px solid #cbd5e1; /* Mismo divisor */
   background: #fff7ed; /* Mismo fondo */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.fullscreenBtn {
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ea580c;
+  transition: all 0.2s ease;
+}
+
+.fullscreenBtn:hover {
+  background: rgba(234, 88, 12, 0.08);
+  color: #c2410c;
+}
+
+.fullscreenBtn:active {
+  transform: scale(0.95);
 }
 
 .roomSub {
@@ -120,6 +191,38 @@
 }
 
 .gridSlot:hover {
+  background: rgba(249, 115, 22, 0.1);
+}
+
+.weekGridRow {
+  height: 80px;
+  min-height: 80px;
+  flex-shrink: 0;
+  display: flex;
+  box-sizing: border-box;
+  border-bottom: 2px solid #cbd5e1;
+}
+
+.weekGridRow:nth-child(even) {
+  background: #f1f5f9;
+}
+.weekGridRow:nth-child(odd) {
+  background: #ffffff;
+}
+
+.weekGridSubSlot {
+  flex: 1;
+  height: 100%;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: background var(--transition-fast);
+}
+
+.weekGridSubSlot:not(:last-child) {
+  border-right: 1px solid #cbd5e1;
+}
+
+.weekGridSubSlot:hover {
   background: rgba(249, 115, 22, 0.1);
 }
 
@@ -261,7 +364,7 @@
     top: 0;
     bottom: 0;
     width: 6px;
-    background: linear-gradient(180deg, var(--accent-color), #fb923c);
+    background: var(--card-color, linear-gradient(180deg, var(--accent-color), #fb923c));
     transition: width 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
   
