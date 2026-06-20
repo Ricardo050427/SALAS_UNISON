@@ -3,7 +3,7 @@ import React, { useMemo } from 'react';
 import styles from './Calendar.module.css';
 import { format } from 'date-fns';
 import { getEventGradient, formatRooms } from '@/lib/colors';
-import { Maximize2, Minimize2 } from 'lucide-react';
+import { Maximize2, Minimize2, Clock, User, Calendar } from 'lucide-react';
 
 const HOURS = Array.from({ length: 14 }, (_, i) => i + 7); // 7 to 20 (7am to 8pm)
 const ROOMS = [
@@ -18,7 +18,16 @@ const EVENT_COLORS = [
   'linear-gradient(135deg, #10b981, #059669)', // Verde Esmeralda
 ];
 
-export default function DayView({ currentDate, events = [], onSlotClick, onEventClick, lastCreatedEventId, onPrevDay, onNextDay, isFullscreen = false, onToggleFullscreen }) {
+const SOLID_COLORS = {
+  naranja: '#f97316',
+  azul: '#3b82f6',
+  verde: '#10b981',
+  morado: '#8b5cf6',
+  rosa: '#ec4899',
+  amarillo: '#eab308'
+};
+
+export default function DayView({ currentDate, events = [], onSlotClick, onEventClick, lastCreatedEventId, onPrevDay, onNextDay, isFullscreen = false, onToggleFullscreen, isExportMode = false }) {
   const touchStartX = React.useRef(null);
   const touchStartY = React.useRef(null);
 
@@ -118,13 +127,15 @@ export default function DayView({ currentDate, events = [], onSlotClick, onEvent
         {/* Columna de Horas Fija */}
         <div className={styles.timeCol}>
           <div className={styles.headerCorner}>
-            <button 
-              className={styles.fullscreenBtn} 
-              onClick={onToggleFullscreen}
-              title={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
-            >
-              {isFullscreen ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
-            </button>
+            {!isExportMode && (
+              <button 
+                className={styles.fullscreenBtn} 
+                onClick={onToggleFullscreen}
+                title={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
+              >
+                {isFullscreen ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
+              </button>
+            )}
           </div>
           {HOURS.map(h => (
             <div key={`time-${h}`} className={styles.timeSlot}>
@@ -237,9 +248,9 @@ export default function DayView({ currentDate, events = [], onSlotClick, onEvent
       >
         {dayEvents.length === 0 ? (
           <div style={{ textAlign: 'center', padding: '4rem 1rem', color: 'var(--text-secondary)' }}>
-            <span style={{ fontSize: '3rem', display: 'block', marginBottom: '1rem', opacity: 0.5 }}>📭</span>
-            <p style={{ fontWeight: 500 }}>Día libre.</p>
-            <p style={{ fontSize: '0.9rem' }}>No hay eventos programados.</p>
+            <Calendar size={48} style={{ margin: '0 auto 1.5rem auto', opacity: 0.35, color: 'var(--text-secondary)' }} />
+            <p style={{ fontWeight: 500, margin: '0 0 4px 0' }}>Día libre</p>
+            <p style={{ fontSize: '0.9rem', margin: 0 }}>No hay eventos programados</p>
           </div>
         ) : (
           sortedMobileHours.map(hour => {
@@ -265,7 +276,10 @@ export default function DayView({ currentDate, events = [], onSlotClick, onEvent
                       <div
                         key={`mob-evt-${evt.id}`}
                         className={`${styles.mobileEventCard} ${isNew ? styles.animatePop : ''}`}
-                        style={{ '--card-color': cardColorGradient }}
+                        style={{ 
+                          '--card-color': cardColorGradient,
+                          '--card-color-solid': SOLID_COLORS[evt.color] || '#ea580c'
+                        }}
                         onClick={(e) => {
                           e.stopPropagation();
                           if (onEventClick) onEventClick(evt);
@@ -273,16 +287,18 @@ export default function DayView({ currentDate, events = [], onSlotClick, onEvent
                       >
                         <div className={styles.mobileEventHeader}>
                           <div className={styles.mobileEventTitle}>{evt.evento}</div>
-                          <div className={styles.mobileRoomBadge} style={{ background: cardColorGradient }}>{formatRooms(evt.salasAsignadas).toUpperCase().replace(/\bY\b/g, 'y')}</div>
+                          <div className={styles.mobileRoomBadge} style={{ background: cardColorGradient }}>
+                            {formatRooms(evt.salasAsignadas).toUpperCase().replace(/\bY\b/g, 'y')}
+                          </div>
                         </div>
 
                         <div className={styles.mobileEventBody}>
                           <div className={styles.mobileEventRow}>
-                            <span style={{ fontSize: '1.05rem' }}>🕒</span>
+                            <Clock size={16} className={styles.rowIcon} />
                             <span>{evt.horaInicio}:00 - {evt.horaFin}:00 hrs</span>
                           </div>
                           <div className={styles.mobileEventRow}>
-                            <span style={{ fontSize: '1.05rem' }}>👤</span>
+                            <User size={16} className={styles.rowIcon} />
                             <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                               {evt.nombre}
                             </span>

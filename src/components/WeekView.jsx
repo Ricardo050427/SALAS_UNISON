@@ -14,7 +14,7 @@ const EVENT_COLORS = [
   'linear-gradient(135deg, #10b981, #059669)', // Verde Esmeralda
 ];
 
-export default function WeekView({ currentDate, events = [], onSlotClick, onEventClick, lastCreatedEventId, showSubdivisions = true, isFullscreen = false, onToggleFullscreen }) {
+export default function WeekView({ currentDate, events = [], onSlotClick, onEventClick, lastCreatedEventId, showSubdivisions = true, isFullscreen = false, onToggleFullscreen, isExportMode = false }) {
   
   // Lunes a Viernes de la semana actual
   const getWeekDays = (date) => {
@@ -48,13 +48,15 @@ export default function WeekView({ currentDate, events = [], onSlotClick, onEven
       {/* Columna de Horas */}
       <div className={styles.timeCol}>
         <div className={styles.headerCorner}>
-          <button 
-            className={styles.fullscreenBtn} 
-            onClick={onToggleFullscreen}
-            title={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
-          >
-            {isFullscreen ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
-          </button>
+          {!isExportMode && (
+            <button 
+              className={styles.fullscreenBtn} 
+              onClick={onToggleFullscreen}
+              title={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
+            >
+              {isFullscreen ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
+            </button>
+          )}
         </div>
         {HOURS.map(h => (
           <div key={`time-${h}`} className={styles.timeSlot}>

@@ -244,6 +244,9 @@
   align-items: center;
   justify-content: center;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  /* Force colors to print */
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
 }
 
 .animatePop {
@@ -340,9 +343,9 @@
   
   .mobileEventCard {
     background: #ffffff;
-    border: 1px solid rgba(0,0,0,0.05); /* Lighter, more subtle border */
+    border: 1.5px solid var(--card-color-solid, rgba(0,0,0,0.08)); /* Border matching event color category */
     border-radius: 16px; /* Rounder, modern corners */
-    padding: 1.25rem 1.25rem 1.25rem 1.5rem; /* Padding adjustment for before element */
+    padding: 1.25rem 1.25rem 1.25rem 1.75rem; /* Padding adjustment for thicker before element */
     box-shadow: 0 4px 10px rgba(0,0,0,0.02), 0 10px 25px rgba(0,0,0,0.04); /* Smooth deep shadow */
     cursor: pointer;
     transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
@@ -356,84 +359,114 @@
     overflow: hidden;
   }
 
-  /* Replacing border-left with a sleek colored strip pseudo-element */
+  /* Soft background gradient tint with higher opacity for better visibility from afar */
+  .mobileEventCard::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--card-color);
+    opacity: 0.12; /* 12% opacity background tint */
+    transition: opacity 0.3s ease;
+    z-index: 1;
+    pointer-events: none;
+  }
+
+  .mobileEventCard:hover::after {
+    opacity: 0.18; /* Saturated tint on hover */
+  }
+
+  /* Replacing border-left with a sleek thicker colored strip pseudo-element */
   .mobileEventCard::before {
     content: '';
     position: absolute;
     left: 0;
     top: 0;
     bottom: 0;
-    width: 6px;
+    width: 10px; /* Thicker strip for high color prominence */
     background: var(--card-color, linear-gradient(180deg, var(--accent-color), #fb923c));
     transition: width 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    z-index: 3;
   }
   
   .mobileEventCard:hover {
     transform: translateY(-4px);
-    box-shadow: 0 12px 30px rgba(0,0,0,0.06), 0 4px 12px rgba(249, 115, 22, 0.08); /* Glow effect on hover */
-    border-color: rgba(249, 115, 22, 0.15);
+    box-shadow: 0 12px 30px rgba(0,0,0,0.06), 0 4px 15px var(--card-color-solid, rgba(249, 115, 22, 0.12)); /* Dynamic color glow */
+    border-color: var(--card-color-solid, rgba(249, 115, 22, 0.15));
   }
 
   .mobileEventCard:hover::before {
-    width: 10px; /* Expands color strip on hover */
+    width: 14px; /* Expands color strip on hover */
   }
   
   .mobileEventCard:active {
     transform: scale(0.98) translateY(0);
     box-shadow: 0 4px 10px rgba(0,0,0,0.04);
   }
-  
+
   .mobileEventHeader {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
     gap: 1rem;
+    position: relative;
+    z-index: 2;
   }
-  
+
   .mobileEventTitle {
     font-weight: 800;
-    font-size: 1.25rem;
+    font-size: 1.2rem;
     color: var(--text-primary);
     line-height: 1.3;
     word-break: break-word;
-    letter-spacing: -0.3px; /* Tighter letter spacing for modern look */
+    letter-spacing: -0.3px;
   }
-  
+
   .mobileRoomBadge {
-    background: linear-gradient(135deg, var(--accent-color), #ea580c);
     color: white;
-    padding: 6px 14px;
-    border-radius: 8px; /* Square with rounded corners (iOS style) */
-    font-size: 0.75rem;
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 0.7rem;
     font-weight: 800;
     letter-spacing: 0.5px;
     white-space: nowrap;
-    box-shadow: 0 4px 12px rgba(234, 88, 12, 0.3);
-    border: 1px solid rgba(255,255,255,0.2); /* Edge highlight */
+    box-shadow: 0 4px 12px rgba(234, 88, 12, 0.2);
+    border: 1px solid rgba(255,255,255,0.15);
+    text-shadow: 0 1px 2px rgba(0,0,0,0.1);
   }
-  
+
   .mobileEventBody {
     display: flex;
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 0.6rem;
+    position: relative;
+    z-index: 2;
   }
-  
+
   .mobileEventRow {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: 10px;
     color: var(--text-secondary);
-    font-size: 0.95rem;
-    font-weight: 500;
-    background: #f8fafc; /* Subtle grey background container inside the card */
+    font-size: 0.9rem;
+    font-weight: 600;
+    background: #f8fafc;
     padding: 10px 12px;
     border-radius: 10px;
     border: 1px solid #f1f5f9;
-    transition: background 0.2s;
+    transition: all 0.2s ease;
   }
 
   .mobileEventRow:hover {
     background: #f1f5f9;
+    border-color: var(--card-color-solid, #cbd5e1);
+  }
+
+  .rowIcon {
+    color: var(--card-color-solid, var(--accent-color));
+    flex-shrink: 0;
   }
 
   /* Mantener el Grid scrolleable solo para la Vista Semanal */
@@ -478,4 +511,47 @@
   background: linear-gradient(135deg, #f59e0b, #d97706);
   z-index: 6;
   box-shadow: 0 4px 10px rgba(217, 119, 6, 0.3);
+}
+
+/* Print Overrides */
+@media print {
+  .desktopDayView {
+    display: flex !important;
+  }
+  .mobileDayView {
+    display: none !important;
+  }
+  .calendarWrapper {
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  .gridContent {
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+  }
+  .roomColumn {
+    min-height: auto !important;
+    overflow: visible !important;
+  }
+  /* Force all calendar elements to print with their colors */
+  .eventBlock,
+  .roomHeader,
+  .headerRow,
+  .headerCorner,
+  .timeSlot,
+  .gridSlot,
+  .weekGridRow,
+  .combinedEvent {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
 }

@@ -114,3 +114,49 @@ body {
 .animate-fade-in {
   animation: fadeIn var(--transition-smooth) forwards;
 }
+
+/* Print Overrides for Calendar Export */
+@media print {
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+  body.print-mode {
+    background: #ffffff !important;
+    background-image: none !important;
+    min-height: auto !important;
+    height: auto !important;
+    overflow: visible !important;
+    padding: 0 !important;
+  }
+  
+  body.print-mode [class*="calendarWrapper"] {
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+    background: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+  }
+  
+  body.print-mode [class*="gridContent"] {
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+  }
+
+  body.print-mode [class*="roomColumn"] {
+    min-height: auto !important;
+    overflow: visible !important;
+  }
+
+  body.print-mode [class*="desktopDayView"] {
+    display: flex !important;
+  }
+
+  body.print-mode [class*="mobileDayView"] {
+    display: none !important;
+  }
+}
