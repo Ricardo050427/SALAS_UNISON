@@ -542,6 +542,28 @@
     min-height: auto !important;
     overflow: visible !important;
   }
+
+  /*
+   * Fix: grid lines missing at page breaks.
+   * Browsers clip border-bottom of the last row on a page.
+   * Adding border-top ensures each row has a visible line
+   * from BOTH sides — the top border of the row on the new
+   * page will always render even when the previous row's
+   * border-bottom is clipped.
+   */
+  .timeSlot {
+    border-top: 1px solid #cbd5e1 !important;
+    border-bottom: 1px solid #cbd5e1 !important;
+  }
+  .gridSlot {
+    border-top: 1px solid #cbd5e1 !important;
+    border-bottom: 1px solid #cbd5e1 !important;
+  }
+  .weekGridRow {
+    border-top: 1px solid #cbd5e1 !important;
+    border-bottom: 1px solid #cbd5e1 !important;
+  }
+
   /* Force all calendar elements to print with their colors */
   .eventBlock,
   .roomHeader,
