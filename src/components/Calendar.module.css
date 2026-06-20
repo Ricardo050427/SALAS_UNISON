@@ -541,63 +541,7 @@
   .roomColumn {
     min-height: auto !important;
     overflow: visible !important;
-    min-width: 150px !important; /* Narrower columns for print */
   }
-
-  /* --- Compact slot heights for print (matches JS SLOT_HEIGHT = 44) --- */
-  .timeSlot {
-    height: 44px !important;
-    min-height: 44px !important;
-    font-size: 0.6rem !important;
-  }
-  .gridSlot {
-    height: 44px !important;
-    min-height: 44px !important;
-  }
-  .weekGridRow {
-    height: 44px !important;
-    min-height: 44px !important;
-  }
-
-  /* --- Compact header heights --- */
-  .headerRow {
-    height: 52px !important;
-    min-height: 52px !important;
-    border-bottom: 2px solid #c2410c !important;
-  }
-  .headerCorner {
-    height: 52px !important;
-    min-height: 52px !important;
-    min-width: 60px !important;
-  }
-  .roomHeader {
-    min-height: 52px !important;
-    min-width: 150px !important;
-    font-size: 0.7rem !important;
-    padding: 6px !important;
-  }
-  .weekDayHeader {
-    min-width: 150px !important;
-  }
-  .weekDayHeaderTop {
-    font-size: 0.7rem !important;
-  }
-  .weekDayHeaderBottom {
-    font-size: 0.6rem !important;
-  }
-  .timeCol {
-    min-width: 60px !important;
-    width: 60px !important;
-  }
-
-  /* --- Event block text sizing --- */
-  .eventTitle {
-    font-size: 0.65rem !important;
-  }
-  .roomSub {
-    font-size: 0.6rem !important;
-  }
-
   /* Force all calendar elements to print with their colors */
   .eventBlock,
   .roomHeader,
@@ -612,4 +556,3 @@
     color-adjust: exact !important;
   }
 }
-

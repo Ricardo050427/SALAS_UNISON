@@ -46,26 +46,16 @@
 @media print {
   @page {
     size: landscape;
-    margin: 5mm;
+    margin: 8mm;
   }
   .printPageContainer {
     padding: 0;
-    gap: 0.4rem;
+    gap: 1rem;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
   .printHeader {
-    padding-bottom: 0.4rem;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
-  }
-  .printHeader h1 {
-    font-size: 1.1rem;
-  }
-  .printHeader h2 {
-    font-size: 0.95rem;
-  }
-  .printHeader span {
-    font-size: 0.7rem;
   }
 }

@@ -15,7 +15,6 @@ const EVENT_COLORS = [
 ];
 
 export default function WeekView({ currentDate, events = [], onSlotClick, onEventClick, lastCreatedEventId, showSubdivisions = true, isFullscreen = false, onToggleFullscreen, isExportMode = false }) {
-  const SLOT_HEIGHT = isExportMode ? 44 : 80;
   
   // Lunes a Viernes de la semana actual
   const getWeekDays = (date) => {
@@ -146,8 +145,8 @@ export default function WeekView({ currentDate, events = [], onSlotClick, onEven
                   // Calculos de posición vertical con pequeños márgenes visuales
                   const startOffset = event.horaInicio - 7;
                   const duration = event.horaFin - event.horaInicio;
-                  const top = startOffset * SLOT_HEIGHT + 4;
-                  const height = duration * SLOT_HEIGHT - 8;
+                  const top = startOffset * 80 + 4;
+                  const height = duration * 80 - 8;
                   const bgGradient = getEventGradient(event.color, event.horaInicio);
 
                   return blocksForEvent.map(block => {

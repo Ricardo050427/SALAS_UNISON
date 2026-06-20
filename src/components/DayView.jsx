@@ -28,7 +28,6 @@ const SOLID_COLORS = {
 };
 
 export default function DayView({ currentDate, events = [], onSlotClick, onEventClick, lastCreatedEventId, onPrevDay, onNextDay, isFullscreen = false, onToggleFullscreen, isExportMode = false }) {
-  const SLOT_HEIGHT = isExportMode ? 44 : 80;
   const touchStartX = React.useRef(null);
   const touchStartY = React.useRef(null);
 
@@ -206,8 +205,8 @@ export default function DayView({ currentDate, events = [], onSlotClick, onEvent
                       const duration = event.horaFin - event.horaInicio;
 
                       // Aplicar GAPS internos (margen) para ver la cuadrícula debajo
-                      const top = startOffset * SLOT_HEIGHT + 4;
-                      const height = duration * SLOT_HEIGHT - 8;
+                      const top = startOffset * 80 + 4;
+                      const height = duration * 80 - 8;
                       const bgGradient = getEventGradient(event.color, event.horaInicio);
 
                       return (
