@@ -98,14 +98,29 @@ export default function DayView({
     else dragNodeMap.current.delete(id);
   }, []);
 
-  // Track exact pointer position during drag so room/hour detection
-  // is independent of @dnd-kit's collision algorithm.
-  const hoveredSlotRef = React.useRef(null);
+  // Grid DOM node + live pointer position. We compute the drop room/hour from
+  // raw pointer coordinates (not @dnd-kit collision), because that has proven
+  // unreliable. A document-level capture-phase listener guarantees we always
+  // know exactly where the cursor is at drop time.
+  const gridRef = React.useRef(null);
+  const pointerRef = React.useRef({ x: 0, y: 0 });
+  const moveListenerRef = React.useRef(null);
+
+  const trackPointer = (e) => { pointerRef.current = { x: e.clientX, y: e.clientY }; };
+  const stopTrackingPointer = () => {
+    if (moveListenerRef.current) {
+      document.removeEventListener('pointermove', moveListenerRef.current, true);
+      moveListenerRef.current = null;
+    }
+  };
 
   // 8 px activation distance preserves click events
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   );
+
+  // Safety: drop the global listener if we unmount mid-drag
+  React.useEffect(() => stopTrackingPointer, []);
 
   React.useEffect(() => {
     if (!currentDate || !prevDateRef.current) return;
@@ -170,21 +185,34 @@ export default function DayView({
       const rect = node.getBoundingClientRect();
       setActiveDimensions({ width: rect.width, height: rect.height });
     }
+    // Seed pointer from the activator event, then track it globally.
+    const act = active?.activatorEvent;
+    if (act && typeof act.clientX === 'number') pointerRef.current = { x: act.clientX, y: act.clientY };
+    moveListenerRef.current = trackPointer;
+    document.addEventListener('pointermove', trackPointer, true); // capture phase: always fires
   };
 
-  const handleDragEnd = ({ active, over }) => {
-    const slot = hoveredSlotRef.current;
-    hoveredSlotRef.current = null;
+  const handleDragEnd = ({ active }) => {
+    stopTrackingPointer();
     setActiveEvent(null);
+    if (!onDragEnd) return;
 
-    // Require a valid dnd-kit droppable (pointer was over the grid)
-    // AND a slot from raw pointer position (accurate room/hour).
-    if (!over || !onDragEnd || !slot) return;
+    const grid = gridRef.current;
+    if (!grid) return;
+    const rect = grid.getBoundingClientRect();
+    const { x, y } = pointerRef.current;
+
+    // Dropped outside the grid → revert (no change)
+    if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) return;
 
     const event    = active.data.current.event;
-    const newHour  = slot.hour;
-    const newRoom  = slot.roomIndex + 1;   // roomIndex is 0-based, rooms are 1-based
     const duration = event.horaFin - event.horaInicio;
+
+    // Room from horizontal position (3 equal columns), hour from vertical (80px rows, starts at 7)
+    const colWidth = rect.width / ROOMS.length;
+    const roomIndex = Math.min(Math.max(Math.floor((x - rect.left) / colWidth), 0), ROOMS.length - 1);
+    const newRoom = roomIndex + 1;
+    const newHour = Math.min(Math.max(7 + Math.floor((y - rect.top) / 80), 7), 20);
 
     if (newHour + duration > 21) return;
 
@@ -200,7 +228,7 @@ export default function DayView({
     if (shiftedRooms.some(r => r < 1 || r > 3)) return;
 
     const newSalas = shiftedRooms.sort((a, b) => a - b).join(',');
-    const currentSalas = currentRooms.sort((a, b) => a - b).join(',');
+    const currentSalas = [...currentRooms].sort((a, b) => a - b).join(',');
 
     if (newHour === event.horaInicio && newSalas === currentSalas) return;
 
@@ -208,7 +236,7 @@ export default function DayView({
   };
 
   const handleDragCancel = () => {
-    hoveredSlotRef.current = null;
+    stopTrackingPointer();
     setActiveEvent(null);
   };
   // ────────────────────────────────────────────────────
@@ -260,18 +288,7 @@ export default function DayView({
           </div>
 
           {/* Grid */}
-          <div
-            className={styles.gridContent}
-            onPointerMove={(e) => {
-              if (!activeEvent) return;
-              const rect = e.currentTarget.getBoundingClientRect();
-              const x = Math.max(0, e.clientX - rect.left);
-              const y = Math.max(0, e.clientY - rect.top);
-              const roomIndex = Math.min(Math.floor(x * ROOMS.length / rect.width), ROOMS.length - 1);
-              const hour = Math.min(7 + Math.floor(y / 80), 20);
-              hoveredSlotRef.current = { roomIndex, hour };
-            }}
-          >
+          <div className={styles.gridContent} ref={gridRef}>
             {ROOMS.map((room) => (
               <div key={`col-${room.id}`} className={styles.roomColumn}>
 

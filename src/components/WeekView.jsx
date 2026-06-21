@@ -122,9 +122,26 @@ export default function WeekView({
     else dragNodeMap.current.delete(id);
   }, []);
 
+  // Grid node + live pointer for room detection within a day column.
+  // Date & hour still come from @dnd-kit's reliable per-day droppables;
+  // the room (sub-column) is derived from raw pointer X.
+  const gridRef = React.useRef(null);
+  const pointerRef = React.useRef({ x: 0, y: 0 });
+  const moveListenerRef = React.useRef(null);
+
+  const trackPointer = (e) => { pointerRef.current = { x: e.clientX, y: e.clientY }; };
+  const stopTrackingPointer = () => {
+    if (moveListenerRef.current) {
+      document.removeEventListener('pointermove', moveListenerRef.current, true);
+      moveListenerRef.current = null;
+    }
+  };
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   );
+
+  React.useEffect(() => stopTrackingPointer, []);
 
   const getEventsForDay = (date) => {
     const target = format(date, 'yyyy-MM-dd');
@@ -145,9 +162,14 @@ export default function WeekView({
       const rect = node.getBoundingClientRect();
       setActiveDimensions({ width: rect.width, height: rect.height });
     }
+    const act = active?.activatorEvent;
+    if (act && typeof act.clientX === 'number') pointerRef.current = { x: act.clientX, y: act.clientY };
+    moveListenerRef.current = trackPointer;
+    document.addEventListener('pointermove', trackPointer, true);
   };
 
   const handleDragEnd = ({ active, over }) => {
+    stopTrackingPointer();
     setActiveEvent(null);
     if (!over || !onDragEnd) return;
 
@@ -161,12 +183,41 @@ export default function WeekView({
       ? event.fecha.split('T')[0]
       : new Date(event.fecha).toISOString().split('T')[0];
 
-    if (hour === event.horaInicio && date === currentFechaStr) return; // no change
+    // ── Room shift (only meaningful when day is subdivided into salas) ──
+    let newSalas = event.salasAsignadas;
+    if (showSubdivisions && gridRef.current) {
+      const dayIndex = days.findIndex(d => format(d, 'yyyy-MM-dd') === date);
+      if (dayIndex !== -1) {
+        const rect = gridRef.current.getBoundingClientRect();
+        const dayWidth = rect.width / days.length;
+        const xInDay = pointerRef.current.x - (rect.left + dayIndex * dayWidth);
+        const roomIndex = Math.min(Math.max(Math.floor(xInDay / (dayWidth / 3)), 0), 2);
+        const newRoom = roomIndex + 1;
 
-    onDragEnd({ ...event, horaInicio: hour, horaFin: hour + duration, fecha: date });
+        const match = String(active.id).match(/-b(\d+)$/); // blockStart in drag id
+        const blockStart = match ? parseInt(match[1], 10) : newRoom;
+        const shift = newRoom - blockStart;
+
+        const currentRooms = event.salasAsignadas.split(',').map(Number);
+        const shiftedRooms = currentRooms.map(r => r + shift);
+        if (!shiftedRooms.some(r => r < 1 || r > 3)) {
+          newSalas = shiftedRooms.sort((a, b) => a - b).join(',');
+        }
+      }
+    }
+
+    const noChange = hour === event.horaInicio
+      && date === currentFechaStr
+      && newSalas === event.salasAsignadas;
+    if (noChange) return;
+
+    onDragEnd({ ...event, horaInicio: hour, horaFin: hour + duration, fecha: date, salasAsignadas: newSalas });
   };
 
-  const handleDragCancel = () => setActiveEvent(null);
+  const handleDragCancel = () => {
+    stopTrackingPointer();
+    setActiveEvent(null);
+  };
   // ──────────────────────────────────────────────────────
 
   const formatH = (hour) => hour > 12 ? `${hour - 12} PM` : hour === 12 ? '12 PM' : `${hour} AM`;
@@ -231,7 +282,7 @@ export default function WeekView({
           </div>
 
           {/* Grid */}
-          <div className={styles.gridContent}>
+          <div className={styles.gridContent} ref={gridRef}>
             {days.map((day, dayIndex) => {
               const dayEvents  = getEventsForDay(day);
               const isDayToday = format(day, 'yyyy-MM-dd') === todayStr;
@@ -305,7 +356,7 @@ export default function WeekView({
                       return (
                         <WeekDragEvent
                           key={`${event.id}-block-${block.start}`}
-                          dragId={`week-evt-${event.id}-d${dayIndex}-b${bi}`}
+                          dragId={`week-evt-${event.id}-d${dayIndex}-b${block.start}`}
                           event={event}
                           top={top}
                           height={height}
