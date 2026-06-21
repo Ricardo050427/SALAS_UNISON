@@ -20,9 +20,10 @@ const HOURS = Array.from({ length: 14 }, (_, i) => i + 7);
 
 // ── DnD sub-components ───────────────────────────────────
 
-// Droppable row for subdivision mode (spans all 3 sub-slots of one day)
+// Droppable row for subdivision mode (spans all 3 sub-slots of one day).
+// The dashed highlight now comes from a grid-level footprint preview.
 function WeekDropRow({ id, hour, date, isCurrentHour, isDayToday, isExportMode, onClick, children }) {
-  const { setNodeRef, isOver } = useDroppable({ id, data: { hour, date } });
+  const { setNodeRef } = useDroppable({ id, data: { hour, date } });
   return (
     <div
       ref={setNodeRef}
@@ -30,7 +31,6 @@ function WeekDropRow({ id, hour, date, isCurrentHour, isDayToday, isExportMode, 
         styles.weekGridRow,
         !isExportMode && isDayToday ? styles.currentDayCol : '',
         !isExportMode && isCurrentHour ? styles.currentHourRow : '',
-        isOver ? styles.dragOverSlot : '',
       ].join(' ')}
       onClick={onClick}
     >
@@ -41,7 +41,7 @@ function WeekDropRow({ id, hour, date, isCurrentHour, isDayToday, isExportMode, 
 
 // Droppable slot for non-subdivision mode
 function WeekDropSlot({ id, hour, date, isCurrentHour, isDayToday, isExportMode, onClick }) {
-  const { setNodeRef, isOver } = useDroppable({ id, data: { hour, date } });
+  const { setNodeRef } = useDroppable({ id, data: { hour, date } });
   return (
     <div
       ref={setNodeRef}
@@ -49,7 +49,6 @@ function WeekDropSlot({ id, hour, date, isCurrentHour, isDayToday, isExportMode,
         styles.gridSlot,
         !isExportMode && isDayToday ? styles.currentDayCol : '',
         !isExportMode && isCurrentHour ? styles.currentHourRow : '',
-        isOver ? styles.dragOverSlot : '',
       ].join(' ')}
       onClick={onClick}
     />
@@ -57,10 +56,10 @@ function WeekDropSlot({ id, hour, date, isCurrentHour, isDayToday, isExportMode,
 }
 
 // Draggable event block
-function WeekDragEvent({ event, dragId, top, height, leftStyle, widthStyle, zIndex, isEventActive, lastCreatedEventId, onEventClick, title, children, onRegister }) {
+function WeekDragEvent({ event, dragId, blockStart, span, top, height, leftStyle, widthStyle, zIndex, isEventActive, lastCreatedEventId, onEventClick, title, children, onRegister }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: dragId,
-    data: { event },
+    data: { event, blockStart, span },
   });
   const combinedRef = React.useCallback((node) => {
     setNodeRef(node);
@@ -115,6 +114,7 @@ export default function WeekView({
 
   const [activeEvent, setActiveEvent] = useState(null);
   const [activeDimensions, setActiveDimensions] = useState({ width: 160, height: 72 });
+  const [preview, setPreview] = useState(null); // footprint preview of where the event will land
 
   const dragNodeMap = React.useRef(new Map());
   const registerDragNode = React.useCallback((id, node) => {
@@ -122,14 +122,63 @@ export default function WeekView({
     else dragNodeMap.current.delete(id);
   }, []);
 
-  // Grid node + live pointer for room detection within a day column.
-  // Date & hour still come from @dnd-kit's reliable per-day droppables;
-  // the room (sub-column) is derived from raw pointer X.
+  // Grid node + live pointer. Day, hour and room are all derived from the raw
+  // pointer position against the grid rect, so the preview matches the drop
+  // exactly. A document-level capture-phase listener always fires.
   const gridRef = React.useRef(null);
   const pointerRef = React.useRef({ x: 0, y: 0 });
   const moveListenerRef = React.useRef(null);
+  const activeBlockRef = React.useRef(null); // { blockStart, span, duration, eventRooms, eventSalas }
 
-  const trackPointer = (e) => { pointerRef.current = { x: e.clientX, y: e.clientY }; };
+  // Snap the pointer to a target cell, mirroring exactly what the drop will do.
+  // Returns { dayIndex, hour, date, startRoom, span, newSalas } or null if invalid.
+  const computeTarget = () => {
+    const grid = gridRef.current;
+    const blk = activeBlockRef.current;
+    if (!grid || !blk) return null;
+    const rect = grid.getBoundingClientRect();
+    const { x, y } = pointerRef.current;
+    if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) return null;
+
+    const dayWidth = rect.width / days.length;
+    const dayIndex = Math.min(Math.max(Math.floor((x - rect.left) / dayWidth), 0), days.length - 1);
+    const hour = Math.min(Math.max(7 + Math.floor((y - rect.top) / 80), 7), 20);
+    if (hour + blk.duration > 21) return null;
+    const date = format(days[dayIndex], 'yyyy-MM-dd');
+
+    let startRoom, span, newSalas;
+    if (showSubdivisions) {
+      const xInDay = x - (rect.left + dayIndex * dayWidth);
+      const newRoom = Math.min(Math.max(Math.floor(xInDay / (dayWidth / 3)), 0), 2) + 1;
+      const shift = newRoom - blk.blockStart;
+      const shifted = blk.eventRooms.map(r => r + shift);
+      if (shifted.some(r => r < 1 || r > 3)) return null;
+      startRoom = newRoom;
+      span = blk.span;
+      newSalas = [...shifted].sort((a, b) => a - b).join(',');
+    } else {
+      startRoom = 1;
+      span = 3; // full-day footprint when rooms aren't subdivided
+      newSalas = blk.eventSalas;
+    }
+    return { dayIndex, hour, date, startRoom, span, newSalas };
+  };
+
+  const refreshPreview = () => {
+    const t = computeTarget();
+    setPreview(prev => {
+      if (!t) return prev ? null : prev;
+      if (prev && prev.dayIndex === t.dayIndex && prev.hour === t.hour
+        && prev.startRoom === t.startRoom && prev.span === t.span) return prev;
+      return { dayIndex: t.dayIndex, hour: t.hour, startRoom: t.startRoom, span: t.span, duration: activeBlockRef.current.duration };
+    });
+  };
+
+  const onDragPointerMove = (e) => {
+    pointerRef.current = { x: e.clientX, y: e.clientY };
+    refreshPreview();
+  };
+
   const stopTrackingPointer = () => {
     if (moveListenerRef.current) {
       document.removeEventListener('pointermove', moveListenerRef.current, true);
@@ -153,7 +202,7 @@ export default function WeekView({
 
   // ── DnD handlers ───────────────────────────────────────
   const handleDragStart = ({ active }) => {
-    const event = active.data.current.event;
+    const { event, blockStart, span } = active.data.current;
     setActiveEvent(event);
     // Measure the actual DOM node — active.rect.current.initial is populated
     // asynchronously after onDragStart fires, so we use our own ref map.
@@ -162,61 +211,47 @@ export default function WeekView({
       const rect = node.getBoundingClientRect();
       setActiveDimensions({ width: rect.width, height: rect.height });
     }
+    activeBlockRef.current = {
+      blockStart,
+      span,
+      duration: event.horaFin - event.horaInicio,
+      eventRooms: event.salasAsignadas.split(',').map(Number),
+      eventSalas: event.salasAsignadas,
+    };
     const act = active?.activatorEvent;
     if (act && typeof act.clientX === 'number') pointerRef.current = { x: act.clientX, y: act.clientY };
-    moveListenerRef.current = trackPointer;
-    document.addEventListener('pointermove', trackPointer, true);
+    refreshPreview();
+    moveListenerRef.current = onDragPointerMove;
+    document.addEventListener('pointermove', onDragPointerMove, true);
   };
 
-  const handleDragEnd = ({ active, over }) => {
+  const handleDragEnd = ({ active }) => {
     stopTrackingPointer();
+    const target = computeTarget();
+    const event = active.data.current.event;
+    activeBlockRef.current = null;
     setActiveEvent(null);
-    if (!over || !onDragEnd) return;
+    setPreview(null);
+    if (!onDragEnd || !target) return;
 
-    const event    = active.data.current.event;
-    const { hour, date } = over.data.current;
     const duration = event.horaFin - event.horaInicio;
-
-    if (hour + duration > 21) return; // out of calendar bounds
-
     const currentFechaStr = typeof event.fecha === 'string'
       ? event.fecha.split('T')[0]
       : new Date(event.fecha).toISOString().split('T')[0];
 
-    // ── Room shift (only meaningful when day is subdivided into salas) ──
-    let newSalas = event.salasAsignadas;
-    if (showSubdivisions && gridRef.current) {
-      const dayIndex = days.findIndex(d => format(d, 'yyyy-MM-dd') === date);
-      if (dayIndex !== -1) {
-        const rect = gridRef.current.getBoundingClientRect();
-        const dayWidth = rect.width / days.length;
-        const xInDay = pointerRef.current.x - (rect.left + dayIndex * dayWidth);
-        const roomIndex = Math.min(Math.max(Math.floor(xInDay / (dayWidth / 3)), 0), 2);
-        const newRoom = roomIndex + 1;
-
-        const match = String(active.id).match(/-b(\d+)$/); // blockStart in drag id
-        const blockStart = match ? parseInt(match[1], 10) : newRoom;
-        const shift = newRoom - blockStart;
-
-        const currentRooms = event.salasAsignadas.split(',').map(Number);
-        const shiftedRooms = currentRooms.map(r => r + shift);
-        if (!shiftedRooms.some(r => r < 1 || r > 3)) {
-          newSalas = shiftedRooms.sort((a, b) => a - b).join(',');
-        }
-      }
-    }
-
-    const noChange = hour === event.horaInicio
-      && date === currentFechaStr
-      && newSalas === event.salasAsignadas;
+    const noChange = target.hour === event.horaInicio
+      && target.date === currentFechaStr
+      && target.newSalas === event.salasAsignadas;
     if (noChange) return;
 
-    onDragEnd({ ...event, horaInicio: hour, horaFin: hour + duration, fecha: date, salasAsignadas: newSalas });
+    onDragEnd({ ...event, horaInicio: target.hour, horaFin: target.hour + duration, fecha: target.date, salasAsignadas: target.newSalas });
   };
 
   const handleDragCancel = () => {
     stopTrackingPointer();
+    activeBlockRef.current = null;
     setActiveEvent(null);
+    setPreview(null);
   };
   // ──────────────────────────────────────────────────────
 
@@ -358,6 +393,8 @@ export default function WeekView({
                           key={`${event.id}-block-${block.start}`}
                           dragId={`week-evt-${event.id}-d${dayIndex}-b${block.start}`}
                           event={event}
+                          blockStart={block.start}
+                          span={block.span}
                           top={top}
                           height={height}
                           leftStyle={`calc(${leftPct}% + 2px)`}
@@ -382,6 +419,19 @@ export default function WeekView({
                 </div>
               );
             })}
+
+            {/* Footprint preview: same size as the event being dragged */}
+            {preview && (
+              <div
+                className={styles.dropPreview}
+                style={{
+                  top: `${(preview.hour - 7) * 80 + 4}px`,
+                  height: `${preview.duration * 80 - 8}px`,
+                  left: `calc(${((preview.dayIndex + (preview.startRoom - 1) / 3) / days.length) * 100}% + 2px)`,
+                  width: `calc(${((preview.span / 3) / days.length) * 100}% - 4px)`,
+                }}
+              />
+            )}
           </div>
         </div>
       </div>
