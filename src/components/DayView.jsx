@@ -98,6 +98,10 @@ export default function DayView({
     else dragNodeMap.current.delete(id);
   }, []);
 
+  // Track exact pointer position during drag so room/hour detection
+  // is independent of @dnd-kit's collision algorithm.
+  const hoveredSlotRef = React.useRef(null);
+
   // 8 px activation distance preserves click events
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
@@ -169,17 +173,22 @@ export default function DayView({
   };
 
   const handleDragEnd = ({ active, over }) => {
+    const slot = hoveredSlotRef.current;
+    hoveredSlotRef.current = null;
     setActiveEvent(null);
-    if (!over || !onDragEnd) return;
+
+    // Require a valid dnd-kit droppable (pointer was over the grid)
+    // AND a slot from raw pointer position (accurate room/hour).
+    if (!over || !onDragEnd || !slot) return;
 
     const event    = active.data.current.event;
-    const newHour  = over.data.current.hour;
-    const newRoom  = parseInt(over.data.current.roomId, 10);
+    const newHour  = slot.hour;
+    const newRoom  = slot.roomIndex + 1;   // roomIndex is 0-based, rooms are 1-based
     const duration = event.horaFin - event.horaInicio;
 
-    if (!newRoom || newHour + duration > 21) return;
+    if (newHour + duration > 21) return;
 
-    // blockStart is the sala number of the block being dragged, encoded in drag id as "-b<N>"
+    // blockStart encoded in drag id as "-b<N>"
     const match = String(active.id).match(/-b(\d+)$/);
     const blockStart = match ? parseInt(match[1], 10) : newRoom;
 
@@ -188,17 +197,20 @@ export default function DayView({
     const currentRooms = event.salasAsignadas.split(',').map(Number);
     const shiftedRooms = currentRooms.map(r => r + shift);
 
-    // Reject if any room goes out of the 1-3 range
     if (shiftedRooms.some(r => r < 1 || r > 3)) return;
 
     const newSalas = shiftedRooms.sort((a, b) => a - b).join(',');
+    const currentSalas = currentRooms.sort((a, b) => a - b).join(',');
 
-    if (newHour === event.horaInicio && newSalas === event.salasAsignadas) return;
+    if (newHour === event.horaInicio && newSalas === currentSalas) return;
 
     onDragEnd({ ...event, horaInicio: newHour, horaFin: newHour + duration, salasAsignadas: newSalas });
   };
 
-  const handleDragCancel = () => setActiveEvent(null);
+  const handleDragCancel = () => {
+    hoveredSlotRef.current = null;
+    setActiveEvent(null);
+  };
   // ────────────────────────────────────────────────────
 
   const formatH = (hour) => hour > 12 ? `${hour - 12} PM` : hour === 12 ? '12 PM' : `${hour} AM`;
@@ -248,7 +260,18 @@ export default function DayView({
           </div>
 
           {/* Grid */}
-          <div className={styles.gridContent}>
+          <div
+            className={styles.gridContent}
+            onPointerMove={(e) => {
+              if (!activeEvent) return;
+              const rect = e.currentTarget.getBoundingClientRect();
+              const x = Math.max(0, e.clientX - rect.left);
+              const y = Math.max(0, e.clientY - rect.top);
+              const roomIndex = Math.min(Math.floor(x * ROOMS.length / rect.width), ROOMS.length - 1);
+              const hour = Math.min(7 + Math.floor(y / 80), 20);
+              hoveredSlotRef.current = { roomIndex, hour };
+            }}
+          >
             {ROOMS.map((room) => (
               <div key={`col-${room.id}`} className={styles.roomColumn}>
 
