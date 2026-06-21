@@ -24,6 +24,15 @@ export default function WeekView({ currentDate, events = [], onSlotClick, onEven
   
   const days = getWeekDays(currentDate);
 
+  // Día actual con ajuste sáb/dom → lunes
+  const _rawToday = new Date();
+  const _todayDay = _rawToday.getDay();
+  if (_todayDay === 6) _rawToday.setDate(_rawToday.getDate() + 2);
+  else if (_todayDay === 0) _rawToday.setDate(_rawToday.getDate() + 1);
+  const todayStr = format(_rawToday, 'yyyy-MM-dd');
+  const currentHour = new Date().getHours();
+  const todayInWeek = days.some(d => format(d, 'yyyy-MM-dd') === todayStr);
+
   const getEventsForDay = (date) => {
     const targetDate = format(date, 'yyyy-MM-dd');
     return events.filter(e => {
@@ -58,21 +67,29 @@ export default function WeekView({ currentDate, events = [], onSlotClick, onEven
             </button>
           )}
         </div>
-        {HOURS.map(h => (
-          <div key={`time-${h}`} className={styles.timeSlot}>
-            {h > 12 ? `${h-12} PM` : h === 12 ? '12 PM' : `${h} AM`}
-          </div>
-        ))}
+        {HOURS.map(h => {
+          const isCurrentHour = todayInWeek && h === currentHour;
+          const nextH = h + 1;
+          const formatH = (hour) => hour > 12 ? `${hour - 12} PM` : hour === 12 ? '12 PM' : `${hour} AM`;
+          return (
+            <div key={`time-${h}`} className={`${styles.timeSlot} ${isCurrentHour ? styles.currentHourTimeSlot : ''}`}>
+              <span className={styles.timeStart}>{formatH(h)}</span>
+              <span className={styles.timeSeparator}>↓</span>
+              <span className={styles.timeEnd}>{formatH(nextH)}</span>
+            </div>
+          );
+        })}
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 'min-content' }}>
         
         {/* Cabecera de Días */}
         <div className={styles.headerRow}>
-          {days.map((day, i) => (
-            showSubdivisions ? (
+          {days.map((day, i) => {
+            const isDayToday = format(day, 'yyyy-MM-dd') === todayStr;
+            return showSubdivisions ? (
               <div key={`day-${i}`} className={styles.weekDayHeader}>
-                <div className={styles.weekDayHeaderTop}>
+                <div className={`${styles.weekDayHeaderTop} ${isDayToday ? styles.todayHeaderTop : ''}`}>
                   {format(day, 'EEEE', { locale: es }).toUpperCase()}
                   <span className={styles.roomSub}>{format(day, 'd MMM')}</span>
                 </div>
@@ -83,27 +100,29 @@ export default function WeekView({ currentDate, events = [], onSlotClick, onEven
                 </div>
               </div>
             ) : (
-              <div key={`day-${i}`} className={styles.roomHeader}>
+              <div key={`day-${i}`} className={`${styles.roomHeader} ${isDayToday ? styles.roomHeaderToday : ''}`}>
                 {format(day, 'EEEE', { locale: es }).toUpperCase()}
                 <span className={styles.roomSub}>{format(day, 'd MMM')}</span>
               </div>
-            )
-          ))}
+            );
+          })}
         </div>
 
         {/* Grilla Semanal */}
         <div className={styles.gridContent}>
           {days.map((day, dayIndex) => {
             const dayEvents = getEventsForDay(day);
+            const isDayToday = format(day, 'yyyy-MM-dd') === todayStr;
 
             return (
-              <div key={`col-day-${dayIndex}`} className={styles.roomColumn}>
-                
-                {HOURS.map(h => (
-                  showSubdivisions ? (
-                    <div 
-                      key={`slot-day-${dayIndex}-${h}`} 
-                      className={styles.weekGridRow}
+              <div key={`col-day-${dayIndex}`} className={`${styles.roomColumn} ${isDayToday ? styles.currentDayCol : ''}`}>
+
+                {HOURS.map(h => {
+                  const isCurrentHour = todayInWeek && h === currentHour;
+                  return showSubdivisions ? (
+                    <div
+                      key={`slot-day-${dayIndex}-${h}`}
+                      className={`${styles.weekGridRow} ${isDayToday ? styles.currentDayCol : ''} ${isCurrentHour ? styles.currentHourRow : ''}`}
                     >
                       {['1', '2', '3'].map(roomId => (
                         <div
@@ -115,14 +134,14 @@ export default function WeekView({ currentDate, events = [], onSlotClick, onEven
                       ))}
                     </div>
                   ) : (
-                    <div 
-                      key={`slot-day-${dayIndex}-${h}`} 
-                      className={styles.gridSlot}
+                    <div
+                      key={`slot-day-${dayIndex}-${h}`}
+                      className={`${styles.gridSlot} ${isDayToday ? styles.currentDayCol : ''} ${isCurrentHour ? styles.currentHourRow : ''}`}
                       onClick={() => onSlotClick && onSlotClick(h, day)}
                     >
                     </div>
-                  )
-                ))}
+                  );
+                })}
 
                 {/* Renderizar Eventos superpuestos fraccionados por Sala */}
                 {dayEvents.map(event => {

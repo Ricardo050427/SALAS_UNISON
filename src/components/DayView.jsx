@@ -112,6 +112,15 @@ export default function DayView({ currentDate, events = [], onSlotClick, onEvent
     if (onSlotClick) onSlotClick(hora, salaId);
   };
 
+  // Día actual (sáb/dom → lunes)
+  const _rawToday = new Date();
+  const _td = _rawToday.getDay();
+  if (_td === 6) _rawToday.setDate(_rawToday.getDate() + 2);
+  else if (_td === 0) _rawToday.setDate(_rawToday.getDate() + 1);
+  const todayStr = format(_rawToday, 'yyyy-MM-dd');
+  const isToday = format(currentDate, 'yyyy-MM-dd') === todayStr;
+  const currentHour = new Date().getHours();
+
   // Agrupar eventos para la vista móvil (Agenda)
   const groupedMobileEvents = {};
   dayEvents.forEach(ev => {
@@ -137,11 +146,18 @@ export default function DayView({ currentDate, events = [], onSlotClick, onEvent
               </button>
             )}
           </div>
-          {HOURS.map(h => (
-            <div key={`time-${h}`} className={styles.timeSlot}>
-              {h > 12 ? `${h - 12} PM` : h === 12 ? '12 PM' : `${h} AM`}
-            </div>
-          ))}
+          {HOURS.map(h => {
+            const isCurrentHour = isToday && h === currentHour;
+            const nextH = h + 1;
+            const formatH = (hour) => hour > 12 ? `${hour - 12} PM` : hour === 12 ? '12 PM' : `${hour} AM`;
+            return (
+              <div key={`time-${h}`} className={`${styles.timeSlot} ${isCurrentHour ? styles.currentHourTimeSlot : ''}`}>
+                <span className={styles.timeStart}>{formatH(h)}</span>
+                <span className={styles.timeSeparator}>↓</span>
+                <span className={styles.timeEnd}>{formatH(nextH)}</span>
+              </div>
+            );
+          })}
         </div>
 
         {/* Contenido Dinámico de Salas */}
@@ -165,14 +181,17 @@ export default function DayView({ currentDate, events = [], onSlotClick, onEvent
                 <div key={`col-${room.id}`} className={styles.roomColumn}>
 
                   {/* Bloques de Hora para hacer clics de creacion */}
-                  {HOURS.map(h => (
-                    <div
-                      key={`slot-${room.id}-${h}`}
-                      className={styles.gridSlot}
-                      onClick={() => handleSlotClick(h, room.id)}
-                    >
-                    </div>
-                  ))}
+                  {HOURS.map(h => {
+                    const isCurrentHour = isToday && h === currentHour;
+                    return (
+                      <div
+                        key={`slot-${room.id}-${h}`}
+                        className={`${styles.gridSlot} ${isCurrentHour ? styles.currentHourRow : ''}`}
+                        onClick={() => handleSlotClick(h, room.id)}
+                      >
+                      </div>
+                    );
+                  })}
 
                   {/* Renderizar Eventos superpuestos (Bloques que nacen en esta sala) */}
                   {dayEvents.map(event => {
