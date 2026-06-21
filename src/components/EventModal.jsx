@@ -1,51 +1,88 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { X, Save } from 'lucide-react';
 import styles from './EventModal.module.css';
 import { COLOR_OPTIONS } from '@/lib/colors';
 
 const REQUERIMIENTOS_OPCIONES = [
-  { id: 'coffeebreak', label: 'Coffee Break' },
-  { id: 'extensiones', label: 'Extensiones Eléctricas' },
-  { id: 'acomodo', label: 'Acomodo Especial (Aula/Herradura)' },
-  { id: 'sonido', label: 'Equipo de Sonido' },
+  { id: 'coffeebreak',    label: 'Coffee Break' },
+  { id: 'extensiones',   label: 'Extensiones Eléctricas' },
+  { id: 'acomodo',       label: 'Acomodo Especial (Aula/Herradura)' },
+  { id: 'sonido',        label: 'Equipo de Sonido' },
   { id: 'videoconferencia', label: 'Videoconferencia' },
 ];
 
-export default function EventModal({ isOpen, onClose, onSave, initialData }) {
+export default function EventModal({ isOpen, onClose, onSave, initialData, events = [] }) {
   const [formData, setFormData] = useState({
-    nombre: '',
-    evento: '',
-    fecha: '',
-    horaInicio: 7,
-    horaFin: 8,
-    numAsistentes: '',
-    requerimientos: [],
-    salas: [], // Array de IDs: ['1', '2']
-    notas: '',
-    color: ''
+    nombre: '', evento: '', fecha: '',
+    horaInicio: 7, horaFin: 8,
+    numAsistentes: '', requerimientos: [],
+    salas: [], notas: '', color: '',
   });
 
   useEffect(() => {
     if (initialData && isOpen) {
       setFormData({
-        nombre: initialData.nombre || '',
-        evento: initialData.evento || '',
-        fecha: initialData.fecha ? (typeof initialData.fecha === 'string' ? initialData.fecha.split('T')[0] : initialData.fecha.toISOString().split('T')[0]) : '',
-        horaInicio: initialData.horaInicio || 7,
-        horaFin: initialData.horaFin || 8,
+        nombre:        initialData.nombre || '',
+        evento:        initialData.evento || '',
+        fecha:         initialData.fecha
+          ? (typeof initialData.fecha === 'string'
+              ? initialData.fecha.split('T')[0]
+              : initialData.fecha.toISOString().split('T')[0])
+          : '',
+        horaInicio:    initialData.horaInicio || 7,
+        horaFin:       initialData.horaFin    || 8,
         numAsistentes: initialData.numAsistentes || '',
         requerimientos: initialData.requerimientos || [],
-        salas: initialData.salasAsignadas ? initialData.salasAsignadas.split(',') : (initialData.salaInicial ? [initialData.salaInicial] : []),
-        notas: initialData.notas || '',
-        color: initialData.color || '',
-        id: initialData.id
+        salas: initialData.salasAsignadas
+          ? initialData.salasAsignadas.split(',')
+          : (initialData.salaInicial ? [initialData.salaInicial] : []),
+        notas:  initialData.notas  || '',
+        color:  initialData.color  || '',
+        id:     initialData.id,
       });
     } else if (isOpen) {
-      // Reset default
       setFormData({ nombre: '', evento: '', fecha: '', horaInicio: 7, horaFin: 8, numAsistentes: '', requerimientos: [], salas: [], notas: '', color: '' });
     }
   }, [initialData, isOpen]);
+
+  // ── Disponibilidad en tiempo real ──────────────────────
+  const occupiedRooms = useMemo(() => {
+    if (!formData.fecha || !events.length) return new Set();
+    const inicio = parseInt(formData.horaInicio);
+    const fin    = parseInt(formData.horaFin);
+    // No bloquear nada si el rango es inválido (evita confundir al usuario)
+    if (inicio >= fin) return new Set();
+
+    const occupied = new Set();
+    events.forEach(ev => {
+      // Al editar: excluir el propio evento
+      if (formData.id && ev.id === formData.id) return;
+
+      // Normalizar fecha a YYYY-MM-DD
+      const evDate = typeof ev.fecha === 'string'
+        ? ev.fecha.split('T')[0]
+        : new Date(ev.fecha).toISOString().split('T')[0];
+      if (evDate !== formData.fecha) return;
+
+      // Overlap: (startA < endB) && (endA > startB)
+      if (inicio < ev.horaFin && fin > ev.horaInicio) {
+        ev.salasAsignadas.split(',').forEach(s => occupied.add(s.trim()));
+      }
+    });
+    return occupied;
+  }, [formData.fecha, formData.horaInicio, formData.horaFin, formData.id, events]);
+
+  // Auto-deseleccionar salas que queden ocupadas al cambiar fecha/hora
+  useEffect(() => {
+    if (occupiedRooms.size === 0) return;
+    setFormData(prev => {
+      const newSalas = prev.salas.filter(s => !occupiedRooms.has(s));
+      if (newSalas.length === prev.salas.length) return prev;
+      return { ...prev, salas: newSalas };
+    });
+  }, [occupiedRooms]);
+  // ──────────────────────────────────────────────────────
 
   if (!isOpen) return null;
 
@@ -57,15 +94,14 @@ export default function EventModal({ isOpen, onClose, onSave, initialData }) {
   const handleCheckbox = (id) => {
     setFormData(prev => {
       const isSelected = prev.requerimientos.includes(id);
-      if (isSelected) {
-        return { ...prev, requerimientos: prev.requerimientos.filter(req => req !== id) };
-      } else {
-        return { ...prev, requerimientos: [...prev.requerimientos, id] };
-      }
+      return isSelected
+        ? { ...prev, requerimientos: prev.requerimientos.filter(r => r !== id) }
+        : { ...prev, requerimientos: [...prev.requerimientos, id] };
     });
   };
 
   const toggleRoom = (id) => {
+    if (occupiedRooms.has(id)) return; // sala ocupada, no se puede seleccionar
     setFormData(prev => {
       const isSelected = prev.salas.includes(id);
       return isSelected
@@ -77,25 +113,21 @@ export default function EventModal({ isOpen, onClose, onSave, initialData }) {
   const handleSubmit = (e) => {
     e.preventDefault();
     if (formData.salas.length === 0) {
-      alert("Debes seleccionar al menos una sala.");
+      alert('Debes seleccionar al menos una sala.');
       return;
     }
-    
-    // Asignar color aleatorio si no se seleccionó ninguno
     let selectedColor = formData.color;
     if (!selectedColor) {
       const colors = COLOR_OPTIONS.map(opt => opt.id);
       selectedColor = colors[Math.floor(Math.random() * colors.length)];
     }
-
-    // Convert current salas array back to string for the API format matching schema
-    const payload = { 
-      ...formData, 
-      color: selectedColor,
-      salasAsignadas: formData.salas.sort().join(',') 
-    };
+    const payload = { ...formData, color: selectedColor, salasAsignadas: formData.salas.sort().join(',') };
     onSave(payload);
   };
+
+  const hasDate     = !!formData.fecha;
+  const validRange  = parseInt(formData.horaInicio) < parseInt(formData.horaFin);
+  const showStatus  = hasDate && validRange;
 
   return (
     <div className={styles.overlay} onClick={onClose}>
@@ -128,7 +160,8 @@ export default function EventModal({ isOpen, onClose, onSave, initialData }) {
             </div>
             <div className={styles.formGroup}>
               <label>No. de Asistentes</label>
-              <input required type="number" min="1" max="120" name="numAsistentes" className={styles.input} value={formData.numAsistentes} onChange={handleChange}
+              <input required type="number" min="1" max="120" name="numAsistentes" className={styles.input}
+                value={formData.numAsistentes} onChange={handleChange}
                 title="Máximo 120 personas (3 salas combinadas)" />
             </div>
           </div>
@@ -152,23 +185,30 @@ export default function EventModal({ isOpen, onClose, onSave, initialData }) {
             </div>
 
             <div className={styles.formGroup} style={{ flex: 1.5 }}>
-              <label>Salas a Reservar</label>
+              <label>
+                Salas a Reservar
+                {showStatus && occupiedRooms.size > 0 && (
+                  <span className={styles.occupiedBadge}>
+                    {occupiedRooms.size === 3 ? 'Todas ocupadas' : `Sala${occupiedRooms.size > 1 ? 's' : ''} ${[...occupiedRooms].join(', ')} ocupada${occupiedRooms.size > 1 ? 's' : ''}`}
+                  </span>
+                )}
+              </label>
               <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
-                {['1', '2', '3'].map(s => (
-                  <button
-                    key={s}
-                    type="button"
-                    onClick={() => toggleRoom(s)}
-                    style={{
-                      flex: 1, padding: '8px', borderRadius: '6px', border: '1px solid var(--accent-color)', cursor: 'pointer',
-                      background: formData.salas.includes(s) ? 'var(--accent-color)' : 'transparent',
-                      color: formData.salas.includes(s) ? 'white' : 'var(--accent-color)',
-                      fontWeight: 600
-                    }}
-                  >
-                    Sala {s}
-                  </button>
-                ))}
+                {['1', '2', '3'].map(s => {
+                  const isOccupied = showStatus && occupiedRooms.has(s);
+                  const isSelected = formData.salas.includes(s);
+                  return (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => toggleRoom(s)}
+                      className={`${styles.roomBtn} ${isOccupied ? styles.roomBtnOccupied : isSelected ? styles.roomBtnSelected : ''}`}
+                    >
+                      <span>Sala {s}</span>
+                      {isOccupied && <span className={styles.roomBtnOccupiedLabel}>Ocupada</span>}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -178,11 +218,7 @@ export default function EventModal({ isOpen, onClose, onSave, initialData }) {
             <div className={styles.reqGrid}>
               {REQUERIMIENTOS_OPCIONES.map(req => (
                 <label key={req.id} className={styles.checkboxLabel}>
-                  <input
-                    type="checkbox"
-                    checked={formData.requerimientos.includes(req.id)}
-                    onChange={() => handleCheckbox(req.id)}
-                  />
+                  <input type="checkbox" checked={formData.requerimientos.includes(req.id)} onChange={() => handleCheckbox(req.id)} />
                   {req.label}
                 </label>
               ))}

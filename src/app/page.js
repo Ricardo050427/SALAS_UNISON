@@ -94,8 +94,41 @@ export default function Home() {
       window.open(`/export?view=${view}&date=${isoDate}`, '_blank');
     } else if (option === 'calendar') {
       window.open(`/export-calendar?view=${view}&date=${isoDate}&subdivisions=${showSubdivisions}`, '_blank');
+    } else if (option === 'ical') {
+      window.open(`/api/export-ical?view=${view}&date=${isoDate}`, '_blank');
     }
     setIsExportModalOpen(false);
+  };
+
+  const handleDragEnd = async (updatedEvent) => {
+    // Optimistic update: move event immediately in local state
+    setEvents(prev => prev.map(ev =>
+      ev.id === updatedEvent.id ? { ...ev, ...updatedEvent } : ev
+    ));
+
+    const fechaStr = typeof updatedEvent.fecha === 'string'
+      ? updatedEvent.fecha.split('T')[0]
+      : new Date(updatedEvent.fecha).toISOString().split('T')[0];
+
+    const res = await updateEvent({
+      id:             updatedEvent.id,
+      nombre:         updatedEvent.nombre,
+      evento:         updatedEvent.evento,
+      fecha:          fechaStr,
+      horaInicio:     updatedEvent.horaInicio,
+      horaFin:        updatedEvent.horaFin,
+      numAsistentes:  updatedEvent.numAsistentes,
+      requerimientos: Array.isArray(updatedEvent.requerimientos) ? updatedEvent.requerimientos : [],
+      salasAsignadas: updatedEvent.salasAsignadas,
+      notas:          updatedEvent.notas  || '',
+      color:          updatedEvent.color  || '',
+    });
+
+    if (res.error) {
+      setToastError(res.error);
+      setTimeout(() => setToastError(null), 5000);
+      loadEvents(); // revert optimistic update
+    }
   };
 
   const handlePrev = () => {
@@ -302,6 +335,7 @@ export default function Home() {
               onEventClick={(ev) => setSelectedEventDetails(ev)}
               onPrevDay={handlePrev}
               onNextDay={handleNext}
+              onDragEnd={handleDragEnd}
             />
           ) : (
             <WeekView
@@ -321,6 +355,7 @@ export default function Home() {
                 setIsModalOpen(true);
               }}
               onEventClick={(ev) => setSelectedEventDetails(ev)}
+              onDragEnd={handleDragEnd}
             />
           )}
         </div>
@@ -339,6 +374,7 @@ export default function Home() {
         onClose={() => setIsModalOpen(false)}
         onSave={handleSaveEvent}
         initialData={modalData}
+        events={events}
       />
 
       <EventDetailsModal

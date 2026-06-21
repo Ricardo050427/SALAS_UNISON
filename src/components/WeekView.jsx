@@ -1,218 +1,338 @@
 "use client";
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import styles from './Calendar.module.css';
 import { format, startOfWeek, addDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { getEventGradient, formatRooms } from '@/lib/colors';
 import { Maximize2, Minimize2 } from 'lucide-react';
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  useDraggable,
+  useDroppable,
+} from '@dnd-kit/core';
 
-const HOURS = Array.from({ length: 14 }, (_, i) => i + 7); // 7 to 20
+const HOURS = Array.from({ length: 14 }, (_, i) => i + 7);
 
-const EVENT_COLORS = [
-  'linear-gradient(135deg, #f97316, #ea580c)', // Naranja Brand
-  'linear-gradient(135deg, #0ea5e9, #0284c7)', // Azul Océano
-  'linear-gradient(135deg, #10b981, #059669)', // Verde Esmeralda
-];
+// ── DnD sub-components ───────────────────────────────────
 
-export default function WeekView({ currentDate, events = [], onSlotClick, onEventClick, lastCreatedEventId, showSubdivisions = true, isFullscreen = false, onToggleFullscreen, isExportMode = false }) {
-  
-  // Lunes a Viernes de la semana actual
-  const getWeekDays = (date) => {
-    const start = startOfWeek(date, { weekStartsOn: 1 }); // Comienza en Lunes
+// Droppable row for subdivision mode (spans all 3 sub-slots of one day)
+function WeekDropRow({ id, hour, date, isCurrentHour, isDayToday, isExportMode, onClick, children }) {
+  const { setNodeRef, isOver } = useDroppable({ id, data: { hour, date } });
+  return (
+    <div
+      ref={setNodeRef}
+      className={[
+        styles.weekGridRow,
+        !isExportMode && isDayToday ? styles.currentDayCol : '',
+        !isExportMode && isCurrentHour ? styles.currentHourRow : '',
+        isOver ? styles.dragOverSlot : '',
+      ].join(' ')}
+      onClick={onClick}
+    >
+      {children}
+    </div>
+  );
+}
+
+// Droppable slot for non-subdivision mode
+function WeekDropSlot({ id, hour, date, isCurrentHour, isDayToday, isExportMode, onClick }) {
+  const { setNodeRef, isOver } = useDroppable({ id, data: { hour, date } });
+  return (
+    <div
+      ref={setNodeRef}
+      className={[
+        styles.gridSlot,
+        !isExportMode && isDayToday ? styles.currentDayCol : '',
+        !isExportMode && isCurrentHour ? styles.currentHourRow : '',
+        isOver ? styles.dragOverSlot : '',
+      ].join(' ')}
+      onClick={onClick}
+    />
+  );
+}
+
+// Draggable event block
+function WeekDragEvent({ event, dragId, top, height, leftStyle, widthStyle, zIndex, isEventActive, lastCreatedEventId, onEventClick, title, children }) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: dragId,
+    data: { event },
+  });
+  return (
+    <div
+      ref={setNodeRef}
+      className={`${styles.eventBlock} ${styles.weekEventBlock} ${event.id === lastCreatedEventId ? styles.animatePop : ''}`}
+      style={{
+        top: `${top}px`,
+        height: `${height}px`,
+        left: leftStyle,
+        width: widthStyle,
+        background: getEventGradient(event.color, event.horaInicio),
+        zIndex: isDragging ? 0 : zIndex,
+        opacity: isDragging || isEventActive ? 0.3 : 1,
+        cursor: isDragging ? 'grabbing' : 'grab',
+        userSelect: 'none',
+      }}
+      {...listeners}
+      {...attributes}
+      title={title}
+      onClick={(e) => { e.stopPropagation(); onEventClick?.(event); }}
+    >
+      {children}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────
+
+export default function WeekView({
+  currentDate, events = [], onSlotClick, onEventClick,
+  lastCreatedEventId, showSubdivisions = true,
+  isFullscreen = false, onToggleFullscreen,
+  isExportMode = false, onDragEnd,
+}) {
+  const days = useMemo(() => {
+    const start = startOfWeek(currentDate, { weekStartsOn: 1 });
     return Array.from({ length: 5 }, (_, i) => addDays(start, i));
-  };
-  
-  const days = getWeekDays(currentDate);
+  }, [currentDate]);
 
-  // Día actual con ajuste sáb/dom → lunes
+  // Today detection (Sat/Sun → Mon)
   const _rawToday = new Date();
   const _todayDay = _rawToday.getDay();
   if (_todayDay === 6) _rawToday.setDate(_rawToday.getDate() + 2);
   else if (_todayDay === 0) _rawToday.setDate(_rawToday.getDate() + 1);
-  const todayStr = format(_rawToday, 'yyyy-MM-dd');
+  const todayStr    = format(_rawToday, 'yyyy-MM-dd');
   const currentHour = new Date().getHours();
   const todayInWeek = days.some(d => format(d, 'yyyy-MM-dd') === todayStr);
 
+  const [activeEvent, setActiveEvent] = useState(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+  );
+
   const getEventsForDay = (date) => {
-    const targetDate = format(date, 'yyyy-MM-dd');
+    const target = format(date, 'yyyy-MM-dd');
     return events.filter(e => {
-        const evDate = typeof e.fecha === 'string' ? e.fecha.split('T')[0] : new Date(e.fecha).toISOString().split('T')[0];
-        return evDate === targetDate;
+      const evDate = typeof e.fecha === 'string' ? e.fecha.split('T')[0] : new Date(e.fecha).toISOString().split('T')[0];
+      return evDate === target;
     });
   };
 
-  // Alternancia por hora
-  // Hora de inicio impar (7, 9, 11) -> Naranja Oscuro
-  // Hora de inicio par (8, 10, 12) -> Azul Oscuro
-  const getColorTemplate = (horaInicio) => {
-    const isOdd = horaInicio % 2 !== 0;
-    return isOdd 
-      ? 'linear-gradient(135deg, #ea580c, #9a3412)' // Naranja Oscuro
-      : 'linear-gradient(135deg, #2563eb, #1e3a8a)'; // Azul Oscuro
+  // ── DnD handlers ───────────────────────────────────────
+  const handleDragStart = ({ active }) => setActiveEvent(active.data.current.event);
+
+  const handleDragEnd = ({ active, over }) => {
+    setActiveEvent(null);
+    if (!over || !onDragEnd) return;
+
+    const event    = active.data.current.event;
+    const { hour, date } = over.data.current;
+    const duration = event.horaFin - event.horaInicio;
+
+    if (hour + duration > 21) return; // out of calendar bounds
+
+    const currentFechaStr = typeof event.fecha === 'string'
+      ? event.fecha.split('T')[0]
+      : new Date(event.fecha).toISOString().split('T')[0];
+
+    if (hour === event.horaInicio && date === currentFechaStr) return; // no change
+
+    onDragEnd({ ...event, horaInicio: hour, horaFin: hour + duration, fecha: date });
   };
 
-  return (
-    <div className={styles.calendarWrapper}>
-      
-      {/* Columna de Horas */}
-      <div className={styles.timeCol}>
-        <div className={styles.headerCorner}>
-          {!isExportMode && (
-            <button 
-              className={styles.fullscreenBtn} 
-              onClick={onToggleFullscreen}
-              title={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}
-            >
-              {isFullscreen ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
-            </button>
-          )}
-        </div>
-        {HOURS.map(h => {
-          const isCurrentHour = todayInWeek && h === currentHour;
-          const nextH = h + 1;
-          const formatH = (hour) => hour > 12 ? `${hour - 12} PM` : hour === 12 ? '12 PM' : `${hour} AM`;
-          return (
-            <div key={`time-${h}`} className={`${styles.timeSlot} ${isCurrentHour ? styles.currentHourTimeSlot : ''}`}>
-              <span className={styles.timeStart}>{formatH(h)}</span>
-              <span className={styles.timeSeparator}>↓</span>
-              <span className={styles.timeEnd}>{formatH(nextH)}</span>
-            </div>
-          );
-        })}
-      </div>
+  const handleDragCancel = () => setActiveEvent(null);
+  // ──────────────────────────────────────────────────────
 
-      <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 'min-content' }}>
-        
-        {/* Cabecera de Días */}
-        <div className={styles.headerRow}>
-          {days.map((day, i) => {
-            const isDayToday = format(day, 'yyyy-MM-dd') === todayStr;
-            return showSubdivisions ? (
-              <div key={`day-${i}`} className={styles.weekDayHeader}>
-                <div className={`${styles.weekDayHeaderTop} ${isDayToday ? styles.todayHeaderTop : ''}`}>
+  const formatH = (hour) => hour > 12 ? `${hour - 12} PM` : hour === 12 ? '12 PM' : `${hour} AM`;
+
+  return (
+    <DndContext
+      sensors={sensors}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      onDragCancel={handleDragCancel}
+    >
+      <div className={styles.calendarWrapper}>
+
+        {/* Time column */}
+        <div className={styles.timeCol}>
+          <div className={styles.headerCorner}>
+            {!isExportMode && (
+              <button className={styles.fullscreenBtn} onClick={onToggleFullscreen}
+                title={isFullscreen ? 'Salir de pantalla completa' : 'Pantalla completa'}>
+                {isFullscreen ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
+              </button>
+            )}
+          </div>
+          {HOURS.map(h => {
+            const isCurrentHour = !isExportMode && todayInWeek && h === currentHour;
+            return (
+              <div key={`time-${h}`} className={`${styles.timeSlot} ${isCurrentHour ? styles.currentHourTimeSlot : ''}`}>
+                <span className={styles.timeStart}>{formatH(h)}</span>
+                <span className={styles.timeSeparator}>↓</span>
+                <span className={styles.timeEnd}>{formatH(h + 1)}</span>
+              </div>
+            );
+          })}
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 'min-content' }}>
+
+          {/* Day headers */}
+          <div className={styles.headerRow}>
+            {days.map((day, i) => {
+              const isDayToday = format(day, 'yyyy-MM-dd') === todayStr;
+              return showSubdivisions ? (
+                <div key={`day-${i}`} className={styles.weekDayHeader}>
+                  <div className={`${styles.weekDayHeaderTop} ${isDayToday ? styles.todayHeaderTop : ''}`}>
+                    {format(day, 'EEEE', { locale: es }).toUpperCase()}
+                    <span className={styles.roomSub}>{format(day, 'd MMM')}</span>
+                  </div>
+                  <div className={styles.weekDayHeaderBottom}>
+                    <div className={styles.weekSubroomHeader}>Sala 1</div>
+                    <div className={styles.weekSubroomHeader}>Sala 2</div>
+                    <div className={styles.weekSubroomHeader}>Sala 3</div>
+                  </div>
+                </div>
+              ) : (
+                <div key={`day-${i}`} className={`${styles.roomHeader} ${isDayToday ? styles.roomHeaderToday : ''}`}>
                   {format(day, 'EEEE', { locale: es }).toUpperCase()}
                   <span className={styles.roomSub}>{format(day, 'd MMM')}</span>
                 </div>
-                <div className={styles.weekDayHeaderBottom}>
-                  <div className={styles.weekSubroomHeader}>Sala 1</div>
-                  <div className={styles.weekSubroomHeader}>Sala 2</div>
-                  <div className={styles.weekSubroomHeader}>Sala 3</div>
-                </div>
-              </div>
-            ) : (
-              <div key={`day-${i}`} className={`${styles.roomHeader} ${isDayToday ? styles.roomHeaderToday : ''}`}>
-                {format(day, 'EEEE', { locale: es }).toUpperCase()}
-                <span className={styles.roomSub}>{format(day, 'd MMM')}</span>
-              </div>
-            );
-          })}
-        </div>
+              );
+            })}
+          </div>
 
-        {/* Grilla Semanal */}
-        <div className={styles.gridContent}>
-          {days.map((day, dayIndex) => {
-            const dayEvents = getEventsForDay(day);
-            const isDayToday = format(day, 'yyyy-MM-dd') === todayStr;
+          {/* Grid */}
+          <div className={styles.gridContent}>
+            {days.map((day, dayIndex) => {
+              const dayEvents  = getEventsForDay(day);
+              const isDayToday = format(day, 'yyyy-MM-dd') === todayStr;
+              const dateStr    = format(day, 'yyyy-MM-dd');
 
-            return (
-              <div key={`col-day-${dayIndex}`} className={`${styles.roomColumn} ${isDayToday ? styles.currentDayCol : ''}`}>
+              return (
+                <div
+                  key={`col-day-${dayIndex}`}
+                  className={`${styles.roomColumn} ${!isExportMode && isDayToday ? styles.currentDayCol : ''}`}
+                >
+                  {/* Drop slots per hour */}
+                  {HOURS.map(h => {
+                    const isCurrentHour = !isExportMode && todayInWeek && h === currentHour;
+                    const slotId = `week-slot-${dateStr}-${h}`;
 
-                {HOURS.map(h => {
-                  const isCurrentHour = todayInWeek && h === currentHour;
-                  return showSubdivisions ? (
-                    <div
-                      key={`slot-day-${dayIndex}-${h}`}
-                      className={`${styles.weekGridRow} ${isDayToday ? styles.currentDayCol : ''} ${isCurrentHour ? styles.currentHourRow : ''}`}
-                    >
-                      {['1', '2', '3'].map(roomId => (
-                        <div
-                          key={`slot-day-${dayIndex}-${h}-${roomId}`}
-                          className={styles.weekGridSubSlot}
-                          onClick={() => onSlotClick && onSlotClick(h, day, roomId)}
-                        >
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div
-                      key={`slot-day-${dayIndex}-${h}`}
-                      className={`${styles.gridSlot} ${isDayToday ? styles.currentDayCol : ''} ${isCurrentHour ? styles.currentHourRow : ''}`}
-                      onClick={() => onSlotClick && onSlotClick(h, day)}
-                    >
-                    </div>
-                  );
-                })}
-
-                {/* Renderizar Eventos superpuestos fraccionados por Sala */}
-                {dayEvents.map(event => {
-                  const salas = event.salasAsignadas.split(',').map(Number).sort((a,b)=>a-b);
-                  
-                  // Agrupar salas en bloques contiguos (ej. 1,3 -> [ {start:1,span:1}, {start:3,span:1} ])
-                  const blocksForEvent = [];
-                  let currentStart = salas[0];
-                  let currentSpan = 1;
-                  for (let i = 1; i < salas.length; i++) {
-                     if (salas[i] === salas[i-1] + 1) { currentSpan++; }
-                     else { 
-                       blocksForEvent.push({ start: currentStart, span: currentSpan }); 
-                       currentStart = salas[i]; 
-                       currentSpan = 1; 
-                     }
-                  }
-                  blocksForEvent.push({ start: currentStart, span: currentSpan });
-
-                  // Calculos de posición vertical con pequeños márgenes visuales
-                  const startOffset = event.horaInicio - 7;
-                  const duration = event.horaFin - event.horaInicio;
-                  const top = startOffset * 80 + 4;
-                  const height = duration * 80 - 8;
-                  const bgGradient = getEventGradient(event.color, event.horaInicio);
-
-                  return blocksForEvent.map(block => {
-                    const widthPercent = block.span * 33.33;
-                    const leftPercent = (block.start - 1) * 33.33;
-                    
-                    const blockRooms = [];
-                    for (let r = block.start; r < block.start + block.span; r++) {
-                      blockRooms.push(r);
-                    }
-                    const salaLabel = formatRooms(blockRooms.join(','));
-
-                    return (
-                      <div 
-                        key={`${event.id}-block-${block.start}`}
-                        className={`${styles.eventBlock} ${styles.weekEventBlock} ${event.id === lastCreatedEventId ? styles.animatePop : ''}`}
-                        style={{
-                          top: `${top}px`,
-                          height: `${height}px`,
-                          left: `calc(${leftPercent}% + 2px)`,
-                          width: `calc(${widthPercent}% - 4px)`, 
-                          background: bgGradient,
-                          zIndex: (block.span > 1 ? 6 : 5)
-                        }}
-                        title={`[${salaLabel}] ${event.evento} | Solicitante: ${event.nombre}\nAsistentes: ${event.numAsistentes}\nReq: ${event.requerimientos.join(', ')}`}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if(onEventClick) onEventClick(event);
-                        }}
+                    return showSubdivisions ? (
+                      <WeekDropRow
+                        key={slotId}
+                        id={slotId}
+                        hour={h}
+                        date={dateStr}
+                        isCurrentHour={isCurrentHour}
+                        isDayToday={isDayToday}
+                        isExportMode={isExportMode}
+                        onClick={() => onSlotClick?.(h, day)}
                       >
-                        <div className={styles.eventTitle} style={{ fontSize: '0.8rem', lineHeight: '1.2' }}>
-                          <span style={{ fontWeight: '800', display: 'block', fontSize: '0.7em', opacity: 0.9 }}>
-                            {salaLabel.toUpperCase().replace(/\bY\b/g, 'y')}
-                          </span>
-                          {event.evento}
-                        </div>
-                      </div>
+                        {['1', '2', '3'].map(roomId => (
+                          <div
+                            key={`sub-${dateStr}-${h}-${roomId}`}
+                            className={styles.weekGridSubSlot}
+                            onClick={(e) => { e.stopPropagation(); onSlotClick?.(h, day, roomId); }}
+                          />
+                        ))}
+                      </WeekDropRow>
+                    ) : (
+                      <WeekDropSlot
+                        key={slotId}
+                        id={slotId}
+                        hour={h}
+                        date={dateStr}
+                        isCurrentHour={isCurrentHour}
+                        isDayToday={isDayToday}
+                        isExportMode={isExportMode}
+                        onClick={() => onSlotClick?.(h, day)}
+                      />
                     );
-                  });
-                })}
+                  })}
 
-              </div>
-            );
-          })}
+                  {/* Event blocks */}
+                  {dayEvents.map(event => {
+                    const salas = event.salasAsignadas.split(',').map(Number).sort((a, b) => a - b);
+                    const blocks = [];
+                    let cs = salas[0], cspan = 1;
+                    for (let i = 1; i < salas.length; i++) {
+                      if (salas[i] === salas[i - 1] + 1) cspan++;
+                      else { blocks.push({ start: cs, span: cspan }); cs = salas[i]; cspan = 1; }
+                    }
+                    blocks.push({ start: cs, span: cspan });
+
+                    const top    = (event.horaInicio - 7) * 80 + 4;
+                    const height = (event.horaFin - event.horaInicio) * 80 - 8;
+                    const isEventActive = activeEvent?.id === event.id;
+
+                    return blocks.map((block, bi) => {
+                      const widthPct = block.span * 33.33;
+                      const leftPct  = (block.start - 1) * 33.33;
+                      const blockRooms = [];
+                      for (let r = block.start; r < block.start + block.span; r++) blockRooms.push(r);
+                      const salaLabel = formatRooms(blockRooms.join(','));
+
+                      return (
+                        <WeekDragEvent
+                          key={`${event.id}-block-${block.start}`}
+                          dragId={`week-evt-${event.id}-d${dayIndex}-b${bi}`}
+                          event={event}
+                          top={top}
+                          height={height}
+                          leftStyle={`calc(${leftPct}% + 2px)`}
+                          widthStyle={`calc(${widthPct}% - 4px)`}
+                          zIndex={block.span > 1 ? 6 : 5}
+                          isEventActive={isEventActive}
+                          lastCreatedEventId={lastCreatedEventId}
+                          onEventClick={onEventClick}
+                          title={`[${salaLabel}] ${event.evento} | Solicitante: ${event.nombre}\nAsistentes: ${event.numAsistentes}\nReq: ${Array.isArray(event.requerimientos) ? event.requerimientos.join(', ') : ''}`}
+                        >
+                          <div className={styles.eventTitle} style={{ fontSize: '0.8rem', lineHeight: '1.2' }}>
+                            <span style={{ fontWeight: '800', display: 'block', fontSize: '0.7em', opacity: 0.9 }}>
+                              {salaLabel.toUpperCase().replace(/\bY\b/g, 'y')}
+                            </span>
+                            {event.evento}
+                          </div>
+                        </WeekDragEvent>
+                      );
+                    });
+                  })}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
-      
-    </div>
+
+      {/* ── Drag ghost overlay ── */}
+      <DragOverlay>
+        {activeEvent ? (
+          <div style={{
+            background: getEventGradient(activeEvent.color, activeEvent.horaInicio),
+            height: `${(activeEvent.horaFin - activeEvent.horaInicio) * 80 - 8}px`,
+            width: '160px',
+            borderRadius: '10px',
+            padding: '10px 12px',
+            color: 'white',
+            opacity: 0.92,
+            boxShadow: '0 12px 30px rgba(0,0,0,0.35)',
+            cursor: 'grabbing',
+            fontSize: '0.8rem',
+            fontWeight: 600,
+            overflow: 'hidden',
+            userSelect: 'none',
+          }}>
+            {activeEvent.evento}
+          </div>
+        ) : null}
+      </DragOverlay>
+    </DndContext>
   );
 }

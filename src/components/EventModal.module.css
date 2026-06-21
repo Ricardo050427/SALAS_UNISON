@@ -191,6 +191,51 @@
   box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.05);
 }
 
+/* ── Room availability ── */
+.roomBtn {
+  flex: 1;
+  border-radius: 6px;
+  border: 1.5px solid var(--accent-color);
+  cursor: pointer;
+  background: transparent;
+  color: var(--accent-color);
+  font-weight: 600;
+  font-size: 0.85rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  line-height: 1.2;
+  padding: 8px 4px;
+  transition: all 0.15s;
+}
+.roomBtnSelected {
+  background: var(--accent-color);
+  color: white;
+}
+.roomBtnOccupied {
+  border-color: #ef4444 !important;
+  background: #fef2f2 !important;
+  color: #ef4444 !important;
+  cursor: not-allowed !important;
+  opacity: 0.85;
+}
+.roomBtnOccupiedLabel {
+  font-size: 0.65rem;
+  font-weight: 500;
+}
+.occupiedBadge {
+  margin-left: 8px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #ef4444;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 4px;
+  padding: 1px 6px;
+  vertical-align: middle;
+}
+
 /* Mobile Responsive */
 @media (max-width: 768px) {
   .modal {
