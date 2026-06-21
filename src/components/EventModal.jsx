@@ -185,14 +185,7 @@ export default function EventModal({ isOpen, onClose, onSave, initialData, event
             </div>
 
             <div className={styles.formGroup} style={{ flex: 1.5 }}>
-              <label>
-                Salas a Reservar
-                {showStatus && occupiedRooms.size > 0 && (
-                  <span className={styles.occupiedBadge}>
-                    {occupiedRooms.size === 3 ? 'Todas ocupadas' : `Sala${occupiedRooms.size > 1 ? 's' : ''} ${[...occupiedRooms].join(', ')} ocupada${occupiedRooms.size > 1 ? 's' : ''}`}
-                  </span>
-                )}
-              </label>
+              <label>Salas a Reservar</label>
               <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
                 {['1', '2', '3'].map(s => {
                   const isOccupied = showStatus && occupiedRooms.has(s);
@@ -205,7 +198,10 @@ export default function EventModal({ isOpen, onClose, onSave, initialData, event
                       className={`${styles.roomBtn} ${isOccupied ? styles.roomBtnOccupied : isSelected ? styles.roomBtnSelected : ''}`}
                     >
                       <span>Sala {s}</span>
-                      {isOccupied && <span className={styles.roomBtnOccupiedLabel}>Ocupada</span>}
+                      {/* Always rendered to reserve height — invisible when not occupied */}
+                      <span className={styles.roomBtnOccupiedLabel} style={{ visibility: isOccupied ? 'visible' : 'hidden' }}>
+                        Ocupada
+                      </span>
                     </button>
                   );
                 })}

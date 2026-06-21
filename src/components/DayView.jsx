@@ -27,15 +27,15 @@ const SOLID_COLORS = {
 
 // ── DnD sub-components (must be at module level to follow hooks rules) ──
 
-function DayDropSlot({ hour, roomId, isCurrentHour, isHoverHour, onClick }) {
-  const { setNodeRef } = useDroppable({
+function DayDropSlot({ hour, roomId, isCurrentHour, onClick }) {
+  const { setNodeRef, isOver } = useDroppable({
     id: `day-slot-${roomId}-${hour}`,
-    data: { hour },
+    data: { hour, roomId },
   });
   return (
     <div
       ref={setNodeRef}
-      className={`${styles.gridSlot} ${isCurrentHour ? styles.currentHourRow : ''} ${isHoverHour ? styles.dragOverSlot : ''}`}
+      className={`${styles.gridSlot} ${isCurrentHour ? styles.currentHourRow : ''} ${isOver ? styles.dragOverSlot : ''}`}
       onClick={onClick}
     />
   );
@@ -84,7 +84,7 @@ export default function DayView({
 
   const [animClass, setAnimClass] = useState('');
   const [activeEvent, setActiveEvent] = useState(null);
-  const [dragOverHour, setDragOverHour] = useState(null);
+  const [activeDimensions, setActiveDimensions] = useState({ width: 180, height: 72 });
 
   // 8 px activation distance preserves click events
   const sensors = useSensors(
@@ -144,31 +144,34 @@ export default function DayView({
   const sortedMobileHours = Object.keys(groupedMobileEvents).map(Number).sort((a, b) => a - b);
 
   // ── DnD handlers ────────────────────────────────────
-  const handleDragStart = ({ active }) => setActiveEvent(active.data.current.event);
-
-  const handleDragOver = ({ over }) => {
-    setDragOverHour(over?.data?.current?.hour ?? null);
+  const handleDragStart = ({ active }) => {
+    setActiveEvent(active.data.current.event);
+    // Capture the actual element dimensions so the ghost matches exactly
+    const rect = active.rect.current?.initial ?? active.rect.current?.translated;
+    if (rect) setActiveDimensions({ width: rect.width, height: rect.height });
   };
 
   const handleDragEnd = ({ active, over }) => {
     setActiveEvent(null);
-    setDragOverHour(null);
     if (!over || !onDragEnd) return;
 
     const event    = active.data.current.event;
     const newHour  = over.data.current.hour;
+    const newRoom  = over.data.current.roomId;
     const duration = event.horaFin - event.horaInicio;
 
-    if (newHour === event.horaInicio) return;
-    if (newHour + duration > 21) return; // out of calendar bounds
+    if (newHour + duration > 21) return;
 
-    onDragEnd({ ...event, horaInicio: newHour, horaFin: newHour + duration });
+    // Single-room events: allow changing room; multi-room: keep same rooms
+    const currentRooms = event.salasAsignadas.split(',');
+    const newSalas = currentRooms.length === 1 ? newRoom : event.salasAsignadas;
+
+    if (newHour === event.horaInicio && newSalas === event.salasAsignadas) return;
+
+    onDragEnd({ ...event, horaInicio: newHour, horaFin: newHour + duration, salasAsignadas: newSalas });
   };
 
-  const handleDragCancel = () => {
-    setActiveEvent(null);
-    setDragOverHour(null);
-  };
+  const handleDragCancel = () => setActiveEvent(null);
   // ────────────────────────────────────────────────────
 
   const formatH = (hour) => hour > 12 ? `${hour - 12} PM` : hour === 12 ? '12 PM' : `${hour} AM`;
@@ -177,7 +180,6 @@ export default function DayView({
     <DndContext
       sensors={sensors}
       onDragStart={handleDragStart}
-      onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
     >
@@ -229,7 +231,6 @@ export default function DayView({
                     hour={h}
                     roomId={room.id}
                     isCurrentHour={!isExportMode && isToday && h === currentHour}
-                    isHoverHour={dragOverHour === h}
                     onClick={() => onSlotClick?.(h, room.id)}
                   />
                 ))}
@@ -333,13 +334,13 @@ export default function DayView({
         )}
       </div>
 
-      {/* ── Drag ghost overlay ── */}
+      {/* ── Drag ghost — same dimensions as the original element ── */}
       <DragOverlay>
         {activeEvent ? (
           <div style={{
             background: getEventGradient(activeEvent.color, activeEvent.horaInicio),
-            height: `${(activeEvent.horaFin - activeEvent.horaInicio) * 80 - 8}px`,
-            width: '180px',
+            width:  `${activeDimensions.width}px`,
+            height: `${activeDimensions.height}px`,
             borderRadius: '10px',
             padding: '10px 12px',
             color: 'white',

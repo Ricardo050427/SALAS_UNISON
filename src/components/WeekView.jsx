@@ -109,6 +109,7 @@ export default function WeekView({
   const todayInWeek = days.some(d => format(d, 'yyyy-MM-dd') === todayStr);
 
   const [activeEvent, setActiveEvent] = useState(null);
+  const [activeDimensions, setActiveDimensions] = useState({ width: 160, height: 72 });
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
@@ -123,7 +124,11 @@ export default function WeekView({
   };
 
   // ── DnD handlers ───────────────────────────────────────
-  const handleDragStart = ({ active }) => setActiveEvent(active.data.current.event);
+  const handleDragStart = ({ active }) => {
+    setActiveEvent(active.data.current.event);
+    const rect = active.rect.current?.initial ?? active.rect.current?.translated;
+    if (rect) setActiveDimensions({ width: rect.width, height: rect.height });
+  };
 
   const handleDragEnd = ({ active, over }) => {
     setActiveEvent(null);
@@ -311,13 +316,13 @@ export default function WeekView({
         </div>
       </div>
 
-      {/* ── Drag ghost overlay ── */}
+      {/* ── Drag ghost — same dimensions as the original element ── */}
       <DragOverlay>
         {activeEvent ? (
           <div style={{
             background: getEventGradient(activeEvent.color, activeEvent.horaInicio),
-            height: `${(activeEvent.horaFin - activeEvent.horaInicio) * 80 - 8}px`,
-            width: '160px',
+            width:  `${activeDimensions.width}px`,
+            height: `${activeDimensions.height}px`,
             borderRadius: '10px',
             padding: '10px 12px',
             color: 'white',
