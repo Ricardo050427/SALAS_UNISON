@@ -41,14 +41,19 @@ function DayDropSlot({ hour, roomId, isCurrentHour, onClick }) {
   );
 }
 
-function DayDragEvent({ event, blockStart, top, height, widthStyle, zIndex, isEventActive, lastCreatedEventId, onEventClick }) {
+function DayDragEvent({ event, blockStart, top, height, widthStyle, zIndex, isEventActive, lastCreatedEventId, onEventClick, onRegister }) {
+  const dragId = `day-evt-${event.id}-b${blockStart}`;
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
-    id: `day-evt-${event.id}-b${blockStart}`,
+    id: dragId,
     data: { event },
   });
+  const combinedRef = React.useCallback((node) => {
+    setNodeRef(node);
+    onRegister?.(dragId, node);
+  }, [setNodeRef, dragId, onRegister]);
   return (
     <div
-      ref={setNodeRef}
+      ref={combinedRef}
       className={`${styles.eventBlock} ${event.id === lastCreatedEventId ? styles.animatePop : ''}`}
       style={{
         top: `${top}px`,
@@ -85,6 +90,12 @@ export default function DayView({
   const [animClass, setAnimClass] = useState('');
   const [activeEvent, setActiveEvent] = useState(null);
   const [activeDimensions, setActiveDimensions] = useState({ width: 180, height: 72 });
+
+  const dragNodeMap = React.useRef(new Map());
+  const registerDragNode = React.useCallback((id, node) => {
+    if (node) dragNodeMap.current.set(id, node);
+    else dragNodeMap.current.delete(id);
+  }, []);
 
   // 8 px activation distance preserves click events
   const sensors = useSensors(
@@ -145,10 +156,15 @@ export default function DayView({
 
   // ── DnD handlers ────────────────────────────────────
   const handleDragStart = ({ active }) => {
-    setActiveEvent(active.data.current.event);
-    // Capture the actual element dimensions so the ghost matches exactly
-    const rect = active.rect.current?.initial ?? active.rect.current?.translated;
-    if (rect) setActiveDimensions({ width: rect.width, height: rect.height });
+    const event = active.data.current.event;
+    setActiveEvent(event);
+    // active.rect.current.initial is populated asynchronously (after onDragStart fires),
+    // so we measure the DOM node directly via our own ref map.
+    const node = dragNodeMap.current.get(active.id);
+    if (node) {
+      const rect = node.getBoundingClientRect();
+      setActiveDimensions({ width: rect.width, height: rect.height });
+    }
   };
 
   const handleDragEnd = ({ active, over }) => {
@@ -265,6 +281,7 @@ export default function DayView({
                       isEventActive={isEventActive}
                       lastCreatedEventId={lastCreatedEventId}
                       onEventClick={onEventClick}
+                      onRegister={registerDragNode}
                     />
                   ));
                 })}

@@ -56,14 +56,18 @@ function WeekDropSlot({ id, hour, date, isCurrentHour, isDayToday, isExportMode,
 }
 
 // Draggable event block
-function WeekDragEvent({ event, dragId, top, height, leftStyle, widthStyle, zIndex, isEventActive, lastCreatedEventId, onEventClick, title, children }) {
+function WeekDragEvent({ event, dragId, top, height, leftStyle, widthStyle, zIndex, isEventActive, lastCreatedEventId, onEventClick, title, children, onRegister }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: dragId,
     data: { event },
   });
+  const combinedRef = React.useCallback((node) => {
+    setNodeRef(node);
+    onRegister?.(dragId, node);
+  }, [setNodeRef, dragId, onRegister]);
   return (
     <div
-      ref={setNodeRef}
+      ref={combinedRef}
       className={`${styles.eventBlock} ${styles.weekEventBlock} ${event.id === lastCreatedEventId ? styles.animatePop : ''}`}
       style={{
         top: `${top}px`,
@@ -111,6 +115,12 @@ export default function WeekView({
   const [activeEvent, setActiveEvent] = useState(null);
   const [activeDimensions, setActiveDimensions] = useState({ width: 160, height: 72 });
 
+  const dragNodeMap = React.useRef(new Map());
+  const registerDragNode = React.useCallback((id, node) => {
+    if (node) dragNodeMap.current.set(id, node);
+    else dragNodeMap.current.delete(id);
+  }, []);
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   );
@@ -125,9 +135,15 @@ export default function WeekView({
 
   // ── DnD handlers ───────────────────────────────────────
   const handleDragStart = ({ active }) => {
-    setActiveEvent(active.data.current.event);
-    const rect = active.rect.current?.initial ?? active.rect.current?.translated;
-    if (rect) setActiveDimensions({ width: rect.width, height: rect.height });
+    const event = active.data.current.event;
+    setActiveEvent(event);
+    // Measure the actual DOM node — active.rect.current.initial is populated
+    // asynchronously after onDragStart fires, so we use our own ref map.
+    const node = dragNodeMap.current.get(active.id);
+    if (node) {
+      const rect = node.getBoundingClientRect();
+      setActiveDimensions({ width: rect.width, height: rect.height });
+    }
   };
 
   const handleDragEnd = ({ active, over }) => {
@@ -297,6 +313,7 @@ export default function WeekView({
                           isEventActive={isEventActive}
                           lastCreatedEventId={lastCreatedEventId}
                           onEventClick={onEventClick}
+                          onRegister={registerDragNode}
                           title={`[${salaLabel}] ${event.evento} | Solicitante: ${event.nombre}\nAsistentes: ${event.numAsistentes}\nReq: ${Array.isArray(event.requerimientos) ? event.requerimientos.join(', ') : ''}`}
                         >
                           <div className={styles.eventTitle} style={{ fontSize: '0.8rem', lineHeight: '1.2' }}>
