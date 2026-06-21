@@ -8,6 +8,7 @@ import {
   DndContext,
   DragOverlay,
   PointerSensor,
+  pointerWithin,
   useSensor,
   useSensors,
   useDraggable,
@@ -173,14 +174,24 @@ export default function DayView({
 
     const event    = active.data.current.event;
     const newHour  = over.data.current.hour;
-    const newRoom  = over.data.current.roomId;
+    const newRoom  = parseInt(over.data.current.roomId, 10);
     const duration = event.horaFin - event.horaInicio;
 
-    if (newHour + duration > 21) return;
+    if (!newRoom || newHour + duration > 21) return;
 
-    // Single-room events: allow changing room; multi-room: keep same rooms
-    const currentRooms = event.salasAsignadas.split(',');
-    const newSalas = currentRooms.length === 1 ? newRoom : event.salasAsignadas;
+    // blockStart is the sala number of the block being dragged, encoded in drag id as "-b<N>"
+    const match = String(active.id).match(/-b(\d+)$/);
+    const blockStart = match ? parseInt(match[1], 10) : newRoom;
+
+    // Shift ALL rooms by (target room − block's starting room)
+    const shift = newRoom - blockStart;
+    const currentRooms = event.salasAsignadas.split(',').map(Number);
+    const shiftedRooms = currentRooms.map(r => r + shift);
+
+    // Reject if any room goes out of the 1-3 range
+    if (shiftedRooms.some(r => r < 1 || r > 3)) return;
+
+    const newSalas = shiftedRooms.sort((a, b) => a - b).join(',');
 
     if (newHour === event.horaInicio && newSalas === event.salasAsignadas) return;
 
@@ -195,6 +206,7 @@ export default function DayView({
   return (
     <DndContext
       sensors={sensors}
+      collisionDetection={pointerWithin}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
       onDragCancel={handleDragCancel}
