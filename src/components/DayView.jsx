@@ -3,6 +3,7 @@ import React, { useMemo, useState } from 'react';
 import styles from './Calendar.module.css';
 import { format } from 'date-fns';
 import { getEventGradient, formatRooms } from '@/lib/colors';
+import useDragEnabled from '@/lib/useDragEnabled';
 import { Maximize2, Minimize2, Clock, User, Calendar } from 'lucide-react';
 import {
   DndContext,
@@ -16,6 +17,7 @@ import {
 } from '@dnd-kit/core';
 
 const HOURS = Array.from({ length: 14 }, (_, i) => i + 7);
+const NO_SENSORS = []; // stable identity: drag disabled on touch / small screens
 const ROOMS = [
   { id: '1', name: 'Sala 1', capacity: 40 },
   { id: '2', name: 'Sala 2', capacity: 40 },
@@ -162,6 +164,7 @@ export default function DayView({
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   );
+  const dragEnabled = useDragEnabled(); // desktop only — see hook
 
   // Safety: drop the global listener if we unmount mid-drag
   React.useEffect(() => stopTrackingPointer, []);
@@ -271,7 +274,7 @@ export default function DayView({
 
   return (
     <DndContext
-      sensors={sensors}
+      sensors={dragEnabled ? sensors : NO_SENSORS}
       collisionDetection={pointerWithin}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}

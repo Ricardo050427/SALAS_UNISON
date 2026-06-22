@@ -4,6 +4,7 @@ import styles from './Calendar.module.css';
 import { format, startOfWeek, addDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { getEventGradient, formatRooms } from '@/lib/colors';
+import useDragEnabled from '@/lib/useDragEnabled';
 import { Maximize2, Minimize2 } from 'lucide-react';
 import {
   DndContext,
@@ -17,6 +18,7 @@ import {
 } from '@dnd-kit/core';
 
 const HOURS = Array.from({ length: 14 }, (_, i) => i + 7);
+const NO_SENSORS = []; // stable identity: drag disabled on touch / small screens
 
 // ── DnD sub-components ───────────────────────────────────
 
@@ -189,6 +191,7 @@ export default function WeekView({
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
   );
+  const dragEnabled = useDragEnabled(); // desktop only — see hook
 
   React.useEffect(() => stopTrackingPointer, []);
 
@@ -259,7 +262,7 @@ export default function WeekView({
 
   return (
     <DndContext
-      sensors={sensors}
+      sensors={dragEnabled ? sensors : NO_SENSORS}
       collisionDetection={pointerWithin}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
