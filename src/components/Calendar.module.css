@@ -174,9 +174,11 @@
 
 /* Cada roomHeader del día actual */
 .roomHeaderToday {
-  background: #fff7ed !important;
-  color: #ea580c !important;
-  border-right: 2px solid #c2410c !important;
+  /* Tint the header like its day column so the highlight is continuous
+     (matches subdivision mode); keep the gray divider used by the body. */
+  background: rgba(234, 88, 12, 0.1) !important;
+  color: #c2410c !important;
+  border-right: 2px solid #cbd5e1 !important;
 }
 
 /* WeekView: columna del día actual */
