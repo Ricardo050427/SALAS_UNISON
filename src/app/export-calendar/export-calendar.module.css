@@ -49,7 +49,9 @@
     margin: 8mm;
   }
   .printPageContainer {
-    padding: 0;
+    /* Tiny horizontal inset so the grid's right/left border isn't flush against
+       the printable edge — otherwise the browser drops that hairline in print. */
+    padding: 0 4px;
     gap: 1rem;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
